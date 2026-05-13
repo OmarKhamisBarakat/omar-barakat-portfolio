@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/* ── Custom Theme (Tailwind token registration) ── */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* These map to CSS variables we control dynamically */
+  --color-primary: var(--theme-primary);
+  --color-on-primary: var(--theme-on-primary);
+  --color-surface: var(--theme-surface);
+  --color-on-surface: var(--theme-on-surface);
+  --color-surface-container-low: var(--theme-surface-container-low);
+  --color-on-surface-variant: var(--theme-on-surface-variant);
+  --color-outline-variant: var(--theme-outline-variant);
+}
+
+/* ── Light Theme (default) ── */
+:root {
+  --theme-primary: #3B5DAE;
+  --theme-on-primary: #FFFFFF;
+  --theme-surface: #F8F9FE;
+  --theme-on-surface: #1A1C1E;
+  --theme-surface-container-low: #FFFFFF;
+  --theme-on-surface-variant: #44474E;
+  --theme-outline-variant: #C4C6D0;
+}
+
+/* ── Dark Theme ── */
+[data-theme="dark"] {
+  --theme-primary: #ADC6FF;
+  --theme-on-primary: #002E69;
+  --theme-surface: #1A1C1E;
+  --theme-on-surface: #E2E2E6;
+  --theme-surface-container-low: #1A1C1E;
+  --theme-on-surface-variant: #C4C6D0;
+  --theme-outline-variant: #44474E;
+}
+
+/* ── Base Styles ── */
+@layer base {
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    background-color: var(--theme-surface);
+    color: var(--theme-on-surface);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  ::selection {
+    background-color: oklch(from var(--theme-primary) l c h / 0.3);
+    color: var(--theme-primary);
+  }
+}
+
+/* ── Component Utilities ── */
+@layer components {
+  .glass {
+    background-color: oklch(from var(--theme-surface) l c h / 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid oklch(from var(--theme-outline-variant) l c h / 0.3);
+    transition: background-color 0.3s ease;
+  }
+
+  .glass-panel {
+    background-color: oklch(from var(--theme-surface-container-low) l c h / 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid oklch(from var(--theme-outline-variant) l c h / 0.3);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .ambient-shadow {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 0 20px -5px oklch(from var(--theme-primary) l c h / 0.05);
+  }
+
+  [data-theme="dark"] .ambient-shadow {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px oklch(from var(--theme-primary) l c h / 0.1);
+  }
+}
