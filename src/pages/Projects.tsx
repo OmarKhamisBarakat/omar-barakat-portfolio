@@ -16,7 +16,7 @@ const projects = [
     category: "Web",
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800",
     tags: ["ASP.NET", "C#", "HTML"],
-    description: "Developed a full production website for a marketing agency. Implemented backend logic with ASP.NET and responsive frontend components.",
+    description: "Developed a full production website for a marketing agency using ASP.NET and C#.",
     github: "#",
     live: "#"
   },
@@ -25,7 +25,7 @@ const projects = [
     category: "Mobile",
     image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&q=80&w=800",
     tags: ["Flutter", "Dart"],
-    description: "Cross-platform mobile application in active development. Implementing scalable UI components and modern mobile architecture patterns.",
+    description: "Developing a cross-platform mobile application using Flutter.",
     github: "#",
     live: "#"
   },
@@ -34,7 +34,7 @@ const projects = [
     category: "Algorithms",
     image: "https://images.unsplash.com/photo-1580541832626-2a7131ee809f?auto=format&fit=crop&q=80&w=800",
     tags: ["Python"],
-    description: "Implemented a backtracking algorithm capable of solving any valid Sudoku puzzle efficiently with optimized constraint propagation.",
+    description: "Implemented a backtracking algorithm capable of solving any valid Sudoku puzzle efficiently.",
     github: "#",
     live: "#"
   },
@@ -43,7 +43,43 @@ const projects = [
     category: "Software",
     image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=800",
     tags: ["C++", "OOP"],
-    description: "Designed a graphical interactive game using object-oriented programming principles with clean architecture and modular design.",
+    description: "Designed a graphical game using object-oriented programming principles.",
+    github: "#",
+    live: "#"
+  },
+  {
+    title: "Autonomous Safety Car",
+    category: "Cyber-Physical Embedded System",
+    image: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=800",
+    tags: ["Python", "Embedded", "Flask", "TensorFlow Lite"],
+    description: "Built a layered safety vehicle with PIC16F877A motion control, Raspberry Pi UI, and TensorFlow Lite keyword spotting on constrained hardware.",
+    github: "#",
+    live: "#"
+  },
+  {
+    title: "Plant Disease Detection",
+    category: "Computer Vision",
+    image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&q=80&w=800",
+    tags: ["Python", "TensorFlow", "OpenCV"],
+    description: "Built a CNN-based plant leaf classifier with image preprocessing, augmentation, and performance evaluation using confusion matrices.",
+    github: "#",
+    live: "#"
+  },
+  {
+    title: "ESP32-Based Digital Synthesizer",
+    category: "Embedded Audio",
+    image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=800",
+    tags: ["ESP32", "C++", "DSP"],
+    description: "Designed a real-time digital synthesizer on ESP32 with multi-waveform audio, hardware controls, and optimized DSP under memory constraints.",
+    github: "#",
+    live: "#"
+  },
+  {
+    title: "MLE & Estimator Distribution in Linear Regression",
+    category: "Statistical Analysis",
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800",
+    tags: ["Python", "NumPy", "Monte Carlo"],
+    description: "Derived OLS/WLS as MLEs and validated estimator distributions with 10,000-trial Monte Carlo simulations on real wage-age data.",
     github: "#",
     live: "#"
   }
@@ -67,7 +103,7 @@ export default function Projects() {
       <header className="mb-16">
         <h1 className="text-5xl font-bold tracking-tighter mb-4">Selected Works</h1>
         <p className="text-on-surface-variant max-w-xl">
-          From full-stack web applications to algorithmic solvers and cross-platform mobile development.
+          A mix of full-stack web apps, algorithmic solvers, embedded systems, and machine learning projects.
         </p>
       </header>
 

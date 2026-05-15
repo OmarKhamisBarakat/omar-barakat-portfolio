@@ -42,7 +42,8 @@ export default function About() {
             <p className="text-xl text-on-surface-variant leading-relaxed">
               I am Omar Khamis Abdelhafiez Barakat, a Communications & Information Engineering 
               student at Zewail City of Science and Technology. I specialize in software engineering, 
-              data annotation for AI/ML, and cross-platform mobile development.
+              data annotation for AI/ML, and cross-platform mobile development, and I love embedded systems 
+              and electronics as well.
             </p>
           </div>
 

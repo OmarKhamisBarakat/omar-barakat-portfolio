@@ -12,7 +12,6 @@ interface NavbarProps {
 const navLinks = [
   { name: "Projects", path: "/projects" },
   { name: "Experience", path: "/experience" },
-  { name: "Photography", path: "/photography" },
   { name: "About", path: "/about" },
   { name: "Contact", path: "/contact" },
 ];
@@ -54,8 +53,8 @@ export default function Navbar({ isDarkMode, setIsDarkMode }: NavbarProps) {
           </button>
 
           <a 
-            href="/Omar_Khamis_CV.pdf" 
-            download="Omar_Khamis_CV.pdf"
+            href="/Omar_Khamis_Resume.pdf" 
+            download="Omar_Khamis_Resume.pdf"
             className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-full text-sm font-bold hover:brightness-110 transition-all cursor-pointer"
           >
             <Download size={16} />
@@ -93,8 +92,8 @@ export default function Navbar({ isDarkMode, setIsDarkMode }: NavbarProps) {
               </Link>
             ))}
             <a 
-              href="/Omar_Khamis_CV.pdf" 
-              download="Omar_Khamis_CV.pdf"
+              href="/Omar_Khamis_Resume.pdf" 
+              download="Omar_Khamis_Resume.pdf"
               className="flex items-center gap-2 text-primary font-bold"
             >
               <Download size={16} />
