@@ -25,7 +25,7 @@ const destinations = [
     img: "/deskbuddy/cairo.png",
     accent: AMBER,
     blurb:
-      "Where the buddy actually lives. The Giza trio in the haze, the Sphinx couched on the sand beside them, and the Cairo Tower's lotus crown catching the last of the light. Camels cross the track — sometimes a whole roped caravan, sometimes one with a tourist aboard. The cat wears a checked keffiyeh and a jalabeya. Look closely at the Sphinx's face.",
+      "Where the buddy actually lives. The Giza trio in the haze, the Sphinx couched on the sand beside them, and the Cairo Tower's lotus crown catching the last of the light. Camels cross the track — sometimes a whole roped caravan, sometimes one with a tourist aboard. On Fridays the cat digs out a checked keffiyeh and a jalabeya. Look closely at the Sphinx's face.",
   },
   {
     city: "MIAMI",
@@ -71,7 +71,7 @@ const destinations = [
 
 const cast = [
   { img: "/deskbuddy/cat_base.png", name: "THE CAT", note: "Blinks. Flicks its tail. Curls up and sleeps once it's late. Nothing decays, nothing dies, nothing guilt-trips you." },
-  { img: "/deskbuddy/cat_cairo.png", name: "CAIRO", note: "A red-checked keffiyeh under a black agal, over a cream jalabeya." },
+  { img: "/deskbuddy/cat_cairo.png", name: "CAIRO", note: "A red-checked keffiyeh under a black agal, over a cream jalabeya — but only on Fridays. The rest of the week it's just the cat." },
   { img: "/deskbuddy/cat_samurai.png", name: "TOKYO", note: "Iron kabuto, golden horns, and a handlebar moustache." },
   { img: "/deskbuddy/cat_newyork.png", name: "NEW YORK", note: "Navy suit, white shirt, red tie. All business." },
   { img: "/deskbuddy/cat_miami.png", name: "MIAMI", note: "Red swim trunks. That's the whole outfit." },
