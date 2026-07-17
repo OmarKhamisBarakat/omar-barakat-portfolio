@@ -2,8 +2,8 @@
 
 /* ── DeskBuddy's own font ──
    Generated straight from the firmware's 3x5 bitmap glyphs (tools/webfont.py in
-   the Pixel Travel Buddy repo), so the project page is set in the very type the
-   device draws on its screen. ~1KB. */
+   the Pixel Travel Buddy repo). It sets every heading on the site — the whole
+   portfolio now speaks in the type the little device draws with. ~1KB. */
 @font-face {
   font-family: 'DeskBuddy Pixel';
   src: url('/fonts/deskbuddy.woff2') format('woff2'),
@@ -13,106 +13,82 @@
   font-display: swap;
 }
 
-/* ── Custom Theme (Tailwind token registration) ── */
+/* ── Theme tokens ──
+   The site is committed-dark now, in the DeskBuddy "vice sunset" palette: an
+   ink background with pink / teal / amber accents. Legacy utility classes
+   (bg-surface, text-primary, …) still resolve, they just render in the new
+   colours so nothing looks orphaned. */
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-pixel: 'DeskBuddy Pixel', ui-monospace, monospace;
 
-  /* These map to CSS variables we control dynamically */
-  --color-primary: var(--theme-primary);
-  --color-on-primary: var(--theme-on-primary);
-  --color-surface: var(--theme-surface);
-  --color-on-surface: var(--theme-on-surface);
-  --color-surface-container-low: var(--theme-surface-container-low);
-  --color-on-surface-variant: var(--theme-on-surface-variant);
-  --color-outline-variant: var(--theme-outline-variant);
+  --color-ink: #0B0A12;
+  --color-ink-2: #100E1B;
+  --color-pink: #FF4FA3;
+  --color-teal: #45E0D8;
+  --color-amber: #FFB347;
+
+  --color-primary: #FF4FA3;
+  --color-on-primary: #0B0A12;
+  --color-surface: #0B0A12;
+  --color-on-surface: #EDEBF5;
+  --color-surface-container-low: #100E1B;
+  --color-on-surface-variant: #9A97AD;
+  --color-outline-variant: #2A2740;
 }
 
-/* ── Light Theme (default) ── */
-:root {
-  --theme-primary: #3B5DAE;
-  --theme-on-primary: #FFFFFF;
-  --theme-surface: #F8F9FE;
-  --theme-on-surface: #1A1C1E;
-  --theme-surface-container-low: #FFFFFF;
-  --theme-on-surface-variant: #44474E;
-  --theme-outline-variant: #C4C6D0;
-}
+:root { color-scheme: dark; }
 
-/* ── Dark Theme ── */
-[data-theme="dark"] {
-  --theme-primary: #ADC6FF;
-  --theme-on-primary: #002E69;
-  --theme-surface: #1A1C1E;
-  --theme-on-surface: #E2E2E6;
-  --theme-surface-container-low: #1A1C1E;
-  --theme-on-surface-variant: #C4C6D0;
-  --theme-outline-variant: #44474E;
-}
-
-/* ── Base Styles ── */
 @layer base {
-  * {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  *::-webkit-scrollbar {
-    display: none;
-  }
+  * { scrollbar-width: none; -ms-overflow-style: none; }
+  *::-webkit-scrollbar { display: none; }
 
-  html {
-    scroll-behavior: auto;
-  }
+  html { scroll-behavior: auto; }
 
   body {
-    background-color: var(--theme-surface);
-    color: var(--theme-on-surface);
+    background-color: #0B0A12;
+    color: #EDEBF5;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  ::selection {
-    background-color: oklch(from var(--theme-primary) l c h / 0.3);
-    color: var(--theme-primary);
-  }
+  ::selection { background-color: rgba(255, 79, 163, 0.3); color: #FFE3F1; }
+
+  /* Pixel headings shouldn't be anti-aliased into mush. */
+  .font-pixel { -webkit-font-smoothing: none; -moz-osx-font-smoothing: unset; }
 }
 
-/* ── Component Utilities ── */
 @layer components {
+  /* Frosted dark bar for the fixed navbar. */
   .glass {
-    background-color: oklch(from var(--theme-surface) l c h / 0.8);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-bottom: 1px solid oklch(from var(--theme-outline-variant) l c h / 0.3);
-    transition: background-color 0.3s ease;
+    background-color: rgba(11, 10, 18, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-
-  .glass-panel {
-    background-color: oklch(from var(--theme-surface-container-low) l c h / 0.7);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid oklch(from var(--theme-outline-variant) l c h / 0.3);
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+  /* A card surface used across the site. */
+  .card {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    transition: border-color 0.25s ease, transform 0.25s ease, background-color 0.25s ease;
   }
-
-  .ambient-shadow {
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 0 20px -5px oklch(from var(--theme-primary) l c h / 0.05);
-  }
-
-  [data-theme="dark"] .ambient-shadow {
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px oklch(from var(--theme-primary) l c h / 0.1);
-  }
+  .card:hover { border-color: rgba(255, 255, 255, 0.24); }
+  /* Legacy alias so any leftover markup keeps a matching surface. */
+  .glass-panel { background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.10); }
+  .ambient-shadow { box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.7); }
 }
 
-/* ── Pixel art ──
-   The buddy's sprites are drawn at 320x240; keep every pixel a hard square when
-   the page blows them up, instead of letting the browser smudge them. */
 @layer utilities {
-  .pixelated {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
+  /* Keep every sprite pixel a hard square when the page blows it up. */
+  .pixelated { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+  /* The signature pink→amber→teal wash used on hero words. */
+  .vice-text {
+    background-image: linear-gradient(100deg, #FF4FA3 8%, #FFB347 50%, #45E0D8 92%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }
