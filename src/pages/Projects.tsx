@@ -1,7 +1,22 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { ExternalLink, Tag } from "lucide-react";
 import { cn } from "../lib/utils";
+import { DESKBUDDY_GITHUB } from "./DeskBuddy";
+
+type Project = {
+  title: string;
+  category: string;
+  image: string;
+  tags: string[];
+  description: string;
+  github: string;
+  live: string;
+  internal?: boolean;   // `live` is a route on this site, not an external URL
+  liveLabel?: string;
+  pixelated?: boolean;  // sprite art: scale it crisp, not smoothed
+};
 
 const GithubIcon = ({ size = 18 }: { size?: number }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -10,7 +25,19 @@ const GithubIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
-const projects = [
+const projects: Project[] = [
+  {
+    title: "DeskBuddy — Pixel Travel Buddy",
+    category: "Embedded Systems",
+    image: "/deskbuddy/miami.png",
+    pixelated: true,
+    tags: ["ESP32", "C++", "Python", "Embedded", "BLE"],
+    description: "An ESP32 desk companion: a pixel cat that flies between six cities when you tap RFID boarding-pass cards. The 320x240 panel is bigger than the heap, so nothing is ever buffered — every frame is dirty rectangles composed on the fly. Also a Bluetooth media remote.",
+    github: DESKBUDDY_GITHUB,
+    live: "/projects/desk-buddy",
+    internal: true,
+    liveLabel: "Case Study",
+  },
   {
     title: "MarkIt Marketing Agency Website",
     category: "Web",
@@ -138,9 +165,12 @@ export default function Projects() {
               className="group glass-panel rounded-3xl overflow-hidden ambient-shadow flex flex-col"
             >
               <div className="relative h-64 overflow-hidden">
-                <img 
-                  src={project.image} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                <img
+                  src={project.image}
+                  className={cn(
+                    "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500",
+                    project.pixelated && "pixelated"
+                  )}
                   alt={project.title}
                 />
                 <div className="absolute top-4 right-4 bg-surface/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
@@ -166,9 +196,15 @@ export default function Projects() {
                   <a href={project.github} className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
                     <GithubIcon size={18} /> Source
                   </a>
-                  <a href={project.live} className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
-                    <ExternalLink size={18} /> Demo
-                  </a>
+                  {project.internal ? (
+                    <Link to={project.live} className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
+                      <ExternalLink size={18} /> {project.liveLabel ?? "Demo"}
+                    </Link>
+                  ) : (
+                    <a href={project.live} className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors">
+                      <ExternalLink size={18} /> {project.liveLabel ?? "Demo"}
+                    </a>
+                  )}
                 </div>
               </div>
             </motion.div>
