@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SynthSizer — Omar Khamis</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="description" content="Web Bluetooth remote for the SynthSizer — an ESP32-S3 hardware synth. Sequencer, keyboard, wave lab and full knob control over BLE.">
+<meta name="theme-color" content="#0B0A12">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -101,13 +104,15 @@
   /* knob bank */
   .knobs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
   @media(max-width:560px){.knobs{grid-template-columns:repeat(2,1fr)}}
-  .knob{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(255,255,255,.015)}
+  .knob{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(255,255,255,.015);min-width:0;overflow:hidden}
   .knob .kname{font-family:var(--font-pixel);font-size:.58rem;letter-spacing:.1em;color:var(--w80);text-transform:uppercase}
   .knob .kbar{height:6px;border-radius:3px;background:var(--outline);overflow:hidden;margin:9px 0 8px;position:relative}
   .knob .kbar i{display:block;height:100%;width:0;background:var(--w35);transition:width .09s linear}
   .knob.ovr .kbar i{background:var(--amber)}
   .knob .krow{display:flex;align-items:center;gap:8px}
-  .knob input[type=range]{flex:1}
+  .knob .krow{flex-wrap:nowrap}
+  .knob input[type=range]{flex:1 1 0;min-width:0}
+  .knob .ktake{flex:none;min-width:64px;text-align:center}
   .knob .kval{font-family:var(--font-mono);font-size:.66rem;color:var(--teal);min-width:34px;text-align:right}
   .knob .ktake{font-family:var(--font-pixel);font-size:.52rem;letter-spacing:.06em;padding:5px 8px;border-radius:7px;
     border:1px solid var(--line);background:transparent;color:var(--w50);cursor:pointer;white-space:nowrap}
@@ -302,7 +307,7 @@ const PRESETS={
  'Trap':{0:[0,6,10],1:[8],2:[0,2,3,4,6,8,10,11,12,14],9:[7]},
  'Breakbeat':{0:[0,10],1:[4,12],2:[0,2,4,6,8,10,12,14],3:[15]}};
 
-let ctrlCh=null,pattCh=null;
+let ctrlCh=null,pattCh=null,scopeTimer=null;
 let mode=0,drums=false,scaleIdx=0,rootNote=0,octave=0;
 let seqPlaying=false,seqRec=false,seqLen=16,playhead=0,selMel=-1;
 let ovrMask=0;
@@ -423,7 +428,8 @@ $('clear').onclick=()=>{pat.drum.fill(0);pat.mel.fill(255);send(P.SEQCLEAR,0);pa
 $('bpm').oninput=e=>{$('bpmV').textContent=e.target.value;send(P.TEMPO,+e.target.value)};
 $('len').oninput=e=>{seqLen=+e.target.value;$('lenV').textContent=seqLen;send(P.SEQLEN,seqLen);paint()};
 $('swing').oninput=e=>{$('swingV').textContent=e.target.value;send(P.SWING,+e.target.value)};
-function setMode(m){mode=m;drums=(m===1);
+let modeLock=0;   // ignore incoming mode for a beat after a manual change
+function setMode(m){mode=m;drums=(m===1);modeLock=Date.now()+900;
   $('mSynth').classList.toggle('on',m===0);$('mDrums').classList.toggle('on',m===1);$('mWave').classList.toggle('on',m===2);
   buildKeys();buildKnobs();send(P.MODE,m);}
 $('mSynth').onclick=()=>setMode(0);$('mDrums').onclick=()=>setMode(1);$('mWave').onclick=()=>setMode(2);
@@ -471,7 +477,8 @@ async function doConnect(all){
     setStatus('Scanning',false);
     const opts=all?{acceptAllDevices:true,optionalServices:[SVC]}:{filters:[{services:[SVC]},{namePrefix:'Synth'}],optionalServices:[SVC]};
     const dev=await navigator.bluetooth.requestDevice(opts);
-    dev.addEventListener('gattserverdisconnected',()=>{ctrlCh=pattCh=null;setStatus('Disconnected',false);$('connect').textContent='Connect';});
+    dev.addEventListener('gattserverdisconnected',()=>{ctrlCh=pattCh=null;
+      clearInterval(scopeTimer);scopeTimer=null;setStatus('Disconnected',false);$('connect').textContent='Connect';});
     const srv=await dev.gatt.connect();const svc=await srv.getPrimaryService(SVC);
     ctrlCh=await svc.getCharacteristic(CTRL);
     try{pattCh=await svc.getCharacteristic(PATT);}catch(e){pattCh=null;}
@@ -481,7 +488,7 @@ async function doConnect(all){
       po.addEventListener('characteristicvaluechanged',e=>readPots(e.target.value));}catch(e){}
     try{const wv=await svc.getCharacteristic(WAVE);
       const pull=async()=>{try{const d=await wv.readValue();for(let i=0;i<128;i++)waveBuf[i]=d.getInt8(i);drawScope();}catch(e){}};
-      pull();setInterval(pull,400);}catch(e){}
+      pull();clearInterval(scopeTimer);scopeTimer=setInterval(pull,400);}catch(e){}
     setStatus(dev.name||'Connected',true);$('connect').textContent='Connected';
     await sendPattern();
   }catch(e){setStatus((e&&e.name==='NotFoundError')?'Cancelled':'Failed',false);console.error(e);}
@@ -509,7 +516,7 @@ function readState(dv){
     const tempo=dv.getUint16(13,true);if(document.activeElement!==$('bpm')){$('bpm').value=tempo;$('bpmV').textContent=tempo;}
     $('meter').style.width=(dv.getUint8(17)/255*100)+'%';
     const m=dv.getUint8(0);let rebuild=false;
-    if(m!==mode){mode=m;drums=(m===1);
+    if(m!==mode && Date.now()>modeLock){mode=m;drums=(m===1);
       $('mSynth').classList.toggle('on',m===0);$('mDrums').classList.toggle('on',m===1);$('mWave').classList.toggle('on',m===2);rebuild=true;}
     if(sc!==scaleIdx){scaleIdx=sc;rebuild=true;}if(rt!==rootNote){rootNote=rt;rebuild=true;}if(oc!==octave){octave=oc;rebuild=true;}
     if(rebuild){buildKeys();buildKnobs();}
