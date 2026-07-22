@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Synth Remote — Omar Khamis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --font-sans:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,monospace;
+    --ink:#0B0A12; --ink-2:#100E1B;
+    --pink:#FF4FA3; --teal:#45E0D8; --amber:#FFB347;
+    --on-surface:#EDEBF5; --on-surface-variant:#9A97AD;
+    --outline:#2A2740;
+    --card:rgba(255,255,255,.02); --card-line:rgba(255,255,255,.10);
+    --vice:linear-gradient(100deg,#FF4FA3 8%,#FFB347 50%,#45E0D8 92%);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--ink); color:var(--on-surface); font-family:var(--font-sans);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    padding:max(16px,env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+    min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  h1{
+    font-size:clamp(1.4rem,4.5vw,2rem);margin:0;font-weight:700;letter-spacing:-.02em;
+    background:var(--vice);-webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{font-family:var(--font-mono);font-size:.68rem;color:var(--on-surface-variant);
+       letter-spacing:.14em;text-transform:uppercase;width:100%;margin-top:-4px}
+  .spacer{flex:1}
+  button,select{font-family:inherit;color:inherit}
+  .btn{
+    background:var(--pink);color:#0B0A12;border:0;border-radius:10px;
+    padding:10px 16px;font-weight:600;font-size:.9rem;cursor:pointer;
+    transition:transform .08s ease,filter .15s ease;
+  }
+  .btn:hover{filter:brightness(1.08)} .btn:active{transform:scale(.97)}
+  .btn.ghost{background:transparent;color:var(--on-surface);border:1px solid var(--card-line)}
+  .dot{width:9px;height:9px;border-radius:50%;background:#5b5870;flex:none;
+       box-shadow:0 0 0 0 rgba(69,224,216,.6)}
+  .dot.on{background:var(--teal);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(69,224,216,.5)}70%{box-shadow:0 0 0 7px rgba(69,224,216,0)}100%{box-shadow:0 0 0 0 rgba(69,224,216,0)}}
+  .status{font-family:var(--font-mono);font-size:.72rem;color:var(--on-surface-variant)}
+
+  .card{
+    background:var(--card);border:1px solid var(--card-line);border-radius:14px;
+    padding:16px;margin-bottom:14px;
+  }
+  .card h2{
+    font-family:var(--font-mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--on-surface-variant);margin:0 0 14px;font-weight:600;
+  }
+
+  /* pads */
+  .pads{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .pad{
+    aspect-ratio:1;border-radius:12px;border:1px solid var(--card-line);
+    background:rgba(255,255,255,.03);color:var(--on-surface);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+    transition:transform .06s ease,background .12s ease,border-color .12s ease;
+  }
+  .pad .n{font-family:var(--font-mono);font-size:.62rem;color:var(--on-surface-variant)}
+  .pad .l{font-size:.78rem;font-weight:600}
+  .pad:active,.pad.hit{
+    background:rgba(255,79,163,.22);border-color:var(--pink);transform:scale(.94);
+  }
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{
+    background:transparent;border:1px solid var(--card-line);border-radius:999px;
+    padding:7px 14px;font-size:.8rem;cursor:pointer;color:var(--on-surface-variant);
+    font-family:var(--font-mono);letter-spacing:.04em;
+  }
+  .tab.active{background:rgba(255,79,163,.14);border-color:var(--pink);color:var(--on-surface)}
+  .panel{display:none} .panel.active{display:block}
+
+  .row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+  .row:last-child{border-bottom:0}
+  .row label{flex:1;font-size:.88rem}
+  .row .val{font-family:var(--font-mono);font-size:.75rem;color:var(--teal);min-width:52px;text-align:right}
+  select{
+    background:var(--ink-2);border:1px solid var(--card-line);border-radius:8px;
+    padding:7px 10px;font-size:.85rem;min-width:110px;
+  }
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;background:transparent;flex:1.4;min-width:100px;
+  }
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--outline)}
+  input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--outline)}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--pink);
+    margin-top:-6px;border:0;cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--pink);border:0}
+
+  .toggle{
+    width:46px;height:26px;border-radius:999px;background:var(--outline);
+    border:0;position:relative;cursor:pointer;transition:background .18s ease;flex:none;
+  }
+  .toggle::after{
+    content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+    background:var(--on-surface);transition:transform .18s ease;
+  }
+  .toggle.on{background:var(--pink)}
+  .toggle.on::after{transform:translateX(20px);background:#0B0A12}
+
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{
+    background:transparent;border:1px solid var(--card-line);border-radius:8px;
+    padding:7px 12px;font-size:.8rem;cursor:pointer;font-family:var(--font-mono);
+    color:var(--on-surface-variant);
+  }
+  .seg button.on{background:rgba(69,224,216,.14);border-color:var(--teal);color:var(--on-surface)}
+  .seg button.rec.on{background:rgba(255,79,163,.18);border-color:var(--pink)}
+
+  .meter{height:5px;border-radius:3px;background:var(--outline);overflow:hidden;margin-top:12px}
+  .meter i{display:block;height:100%;width:0;background:var(--vice);transition:width .08s linear}
+
+  .note{
+    font-size:.78rem;color:var(--on-surface-variant);line-height:1.6;
+    border-left:2px solid var(--amber);padding-left:12px;margin-top:6px;
+  }
+  .note b{color:var(--on-surface)}
+  code{font-family:var(--font-mono);font-size:.85em;color:var(--amber)}
+  footer{font-family:var(--font-mono);font-size:.68rem;color:#5b5870;text-align:center;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Synth Remote</h1>
+    <div class="spacer"></div>
+    <span class="dot" id="dot"></span>
+    <span class="status" id="status">disconnected</span>
+    <button class="btn" id="connect">Connect</button>
+    <div class="sub">ESP32-S3 Boutique Synth · Bluetooth LE</div>
+  </header>
+
+  <div class="card">
+    <h2>Keypad</h2>
+    <div class="seg" style="margin-bottom:12px">
+      <button id="mSynth" class="on">Synth</button>
+      <button id="mDrums">Drums</button>
+    </div>
+    <div class="pads" id="pads"></div>
+    <div class="meter"><i id="meter"></i></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-p="synth">Synth</button>
+    <button class="tab" data-p="drums">Drums</button>
+    <button class="tab" data-p="fx">FX</button>
+    <button class="tab" data-p="loop">Loop</button>
+  </div>
+
+  <div class="card panel active" id="p-synth">
+    <h2>Synth</h2>
+    <div class="row"><label>Patch</label><select id="patch"></select></div>
+    <div class="row"><label>Scale</label><select id="scale"></select></div>
+    <div class="row"><label>Root</label><select id="root"></select></div>
+    <div class="row"><label>Octave</label><input type="range" id="oct" min="0" max="6" value="3"><span class="val" id="octV">0</span></div>
+    <div class="row"><label>Bend range</label><input type="range" id="bend" min="0" max="12" value="7"><span class="val" id="bendV">7 st</span></div>
+    <div class="row"><label>Arp</label><select id="arp"></select></div>
+    <div class="row"><label>Arp division</label><select id="arpdiv"></select></div>
+    <div class="row"><label>Chord shape</label><select id="chord"></select></div>
+    <div class="row"><label>Hold</label><button class="toggle" id="hold"></button></div>
+  </div>
+
+  <div class="card panel" id="p-drums">
+    <h2>Drums</h2>
+    <div class="row"><label>Kit</label><select id="kit"></select></div>
+    <div class="row"><label>Tune</label><input type="range" id="dtune" min="0" max="1000" value="430"><span class="val" id="dtuneV">43%</span></div>
+    <div class="row"><label>Decay</label><input type="range" id="ddecay" min="0" max="1000" value="430"><span class="val" id="ddecayV">43%</span></div>
+    <div class="row"><label>Punch</label><input type="range" id="dpunch" min="0" max="1000" value="500"><span class="val" id="dpunchV">50%</span></div>
+    <div class="row"><label>Tone (body↔noise)</label><input type="range" id="dnoise" min="0" max="1000" value="620"><span class="val" id="dnoiseV">62%</span></div>
+    <div class="row"><label>Level</label><input type="range" id="dlevel" min="0" max="1000" value="620"><span class="val" id="dlevelV">62%</span></div>
+  </div>
+
+  <div class="card panel" id="p-fx">
+    <h2>Effects</h2>
+    <div class="row"><label>Delay</label><button class="toggle" id="delay"></button></div>
+    <div class="row"><label>Delay time</label><input type="range" id="dtime" min="40" max="295" value="250"><span class="val" id="dtimeV">250ms</span></div>
+    <div class="row"><label>Feedback</label><input type="range" id="dfbk" min="0" max="1000" value="440"><span class="val" id="dfbkV">44%</span></div>
+    <div class="row"><label>Bitcrush</label><input type="range" id="crush" min="0" max="1000" value="0"><span class="val" id="crushV">0%</span></div>
+  </div>
+
+  <div class="card panel" id="p-loop">
+    <h2>Looper</h2>
+    <div class="row"><label>Transport</label>
+      <div class="seg">
+        <button id="lOff" class="on">Stop</button>
+        <button id="lRec" class="rec">Rec</button>
+        <button id="lPlay">Play</button>
+      </div>
+    </div>
+    <div class="row"><label>Overdub</label><button class="toggle" id="overdub"></button></div>
+    <div class="row"><label>Quantize</label><select id="quant"></select></div>
+    <div class="row"><label>Tempo</label><input type="range" id="tempo" min="50" max="220" value="110"><span class="val" id="tempoV">110</span></div>
+    <div class="row"><label>Metronome</label><button class="toggle" id="metro"></button></div>
+    <div class="row"><label>Clear loop</label><button class="btn ghost" id="clear">Clear</button></div>
+    <div class="note" style="margin-top:12px">Recorded events on device: <b id="evCount">0</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Connecting</h2>
+    <div class="note">
+      Needs <b>Web Bluetooth</b> over HTTPS.<br>
+      <b>Windows / Android:</b> Chrome or Edge — works as-is.<br>
+      <b>iPhone / iPad:</b> Safari has no Web Bluetooth. Open this page in
+      <b>Bluefy</b> (free WebBLE browser on the App Store) and it works.<br>
+      Power the synth, tap <b>Connect</b>, pick <code>Boutique Synth</code>.
+    </div>
+  </div>
+
+  <footer>omarkhamisbarakat.me · synth remote v1</footer>
+</div>
+
+<script>
+const SVC='5a67d678-6361-4f32-8396-54c6926c8fa1';
+const CTRL='5a67d679-6361-4f32-8396-54c6926c8fa1';
+const STATE='5a67d67a-6361-4f32-8396-54c6926c8fa1';
+
+// parameter ids — must match the firmware enum
+const P={MODE:0,PATCH:1,SCALE:2,ROOT:3,OCT:4,BEND:5,ARP:6,ARPDIV:7,CHORD:8,
+  KIT:9,DTUNE:10,DDECAY:11,DLEVEL:12,DNOISE:13,DPUNCH:14,
+  TEMPO:15,METRO:16,DELAY:17,DTIME:18,DFBK:19,CRUSH:20,
+  LOOP:21,QUANT:22,OVERDUB:23,HOLD:24,NOTE:25,DRUM:26,CLEARLOOP:27};
+
+const PATCHES=['Organ','Flute','Guitar','EPiano','Bell','Brass','Bass','Strings','Reed','Pluck'];
+const SCALES=['Chrom','Major','Minor','Dorian','Penta','Blues'];
+const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const ARPS=['Off','Up','Down','UpDn','Rand'];
+const DIVS=['1/4','1/8','1/8T','1/16'];
+const CHORDS=['Oct','Maj','Min','Sus4','5th'];
+const KITS=['Studio','808','Lo-fi','Deep'];
+const QUANTS=['Off','1/8','1/16'];
+const DRUMS=['Kick','Snare','Hat','OpenHat','TomLo','TomMid','TomHi','Clap',
+             'Rim','Cowbell','Shaker','Zap','Kick808','Rimshot','Crash','Floor'];
+
+let ctrlCh=null, drums=false;
+const $=id=>document.getElementById(id);
+
+function fill(sel,arr){ arr.forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=v;sel.appendChild(o);}); }
+fill($('patch'),PATCHES); fill($('scale'),SCALES); fill($('root'),NOTES);
+fill($('arp'),ARPS); fill($('arpdiv'),DIVS); fill($('chord'),CHORDS);
+fill($('kit'),KITS); fill($('quant'),QUANTS);
+$('arpdiv').value=1;
+
+async function send(id,val){
+  if(!ctrlCh) return;
+  const v=Math.max(0,Math.min(65535,Math.round(val)));
+  try{ await ctrlCh.writeValueWithoutResponse(new Uint8Array([id, v&255, v>>8])); }
+  catch(e){ /* transient BLE congestion — next write recovers */ }
+}
+
+// ---------- pads ----------
+const padEl=$('pads');
+function buildPads(){
+  padEl.innerHTML='';
+  for(let i=0;i<16;i++){
+    const b=document.createElement('div');
+    b.className='pad'; b.dataset.i=i;
+    b.innerHTML=`<span class="n">${i+1}</span><span class="l">${drums?DRUMS[i]:NOTES[i%12]}</span>`;
+    const hit=ev=>{ev.preventDefault();
+      b.classList.add('hit'); setTimeout(()=>b.classList.remove('hit'),110);
+      send(drums?P.DRUM:P.NOTE,i);
+    };
+    b.addEventListener('pointerdown',hit);
+    padEl.appendChild(b);
+  }
+}
+buildPads();
+
+function setMode(d){
+  drums=d;
+  $('mSynth').classList.toggle('on',!d);
+  $('mDrums').classList.toggle('on',d);
+  buildPads(); send(P.MODE,d?1:0);
+}
+$('mSynth').onclick=()=>setMode(false);
+$('mDrums').onclick=()=>setMode(true);
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); $('p-'+t.dataset.p).classList.add('active');
+});
+
+// ---------- bindings ----------
+const bindSel=(el,id)=>$(el).onchange=e=>send(id,+e.target.value);
+bindSel('patch',P.PATCH); bindSel('scale',P.SCALE); bindSel('root',P.ROOT);
+bindSel('arp',P.ARP); bindSel('arpdiv',P.ARPDIV); bindSel('chord',P.CHORD);
+bindSel('kit',P.KIT); bindSel('quant',P.QUANT);
+
+function bindRange(el,id,fmt,map){
+  const s=$(el), v=$(el+'V');
+  const upd=()=>{ const raw=+s.value; v.textContent=fmt(raw); send(id, map?map(raw):raw); };
+  s.addEventListener('input',upd);
+}
+bindRange('oct',P.OCT,r=>((r-3)>=0?'+':'')+(r-3));
+bindRange('bend',P.BEND,r=>r+' st');
+bindRange('dtune',P.DTUNE,r=>Math.round(r/10)+'%');
+bindRange('ddecay',P.DDECAY,r=>Math.round(r/10)+'%');
+bindRange('dpunch',P.DPUNCH,r=>Math.round(r/10)+'%');
+bindRange('dnoise',P.DNOISE,r=>Math.round(r/10)+'%');
+bindRange('dlevel',P.DLEVEL,r=>Math.round(r/10)+'%');
+bindRange('dtime',P.DTIME,r=>r+'ms');
+bindRange('dfbk',P.DFBK,r=>Math.round(r/10)+'%');
+bindRange('crush',P.CRUSH,r=>Math.round(r/10)+'%');
+bindRange('tempo',P.TEMPO,r=>r+'');
+
+function bindToggle(el,id){
+  const b=$(el);
+  b.onclick=()=>{ b.classList.toggle('on'); send(id,b.classList.contains('on')?1:0); };
+}
+bindToggle('hold',P.HOLD); bindToggle('delay',P.DELAY);
+bindToggle('overdub',P.OVERDUB); bindToggle('metro',P.METRO);
+
+const loopBtns={0:$('lOff'),1:$('lRec'),2:$('lPlay')};
+function setLoop(s){ Object.entries(loopBtns).forEach(([k,b])=>b.classList.toggle('on',+k===s)); send(P.LOOP,s); }
+$('lOff').onclick=()=>setLoop(0); $('lRec').onclick=()=>setLoop(1); $('lPlay').onclick=()=>setLoop(2);
+$('clear').onclick=()=>send(P.CLEARLOOP,0);
+
+// ---------- bluetooth ----------
+$('connect').onclick=async()=>{
+  if(!navigator.bluetooth){
+    $('status').textContent='no Web Bluetooth';
+    alert('This browser has no Web Bluetooth.\n\niPhone/iPad: open this page in the Bluefy app.\nWindows/Android: use Chrome or Edge.');
+    return;
+  }
+  try{
+    $('status').textContent='scanning…';
+    const dev=await navigator.bluetooth.requestDevice({filters:[{services:[SVC]}]});
+    dev.addEventListener('gattserverdisconnected',()=>{
+      ctrlCh=null; $('dot').classList.remove('on'); $('status').textContent='disconnected';
+      $('connect').textContent='Connect';
+    });
+    const srv=await dev.gatt.connect();
+    const svc=await srv.getPrimaryService(SVC);
+    ctrlCh=await svc.getCharacteristic(CTRL);
+    const st=await svc.getCharacteristic(STATE);
+    await st.startNotifications();
+    st.addEventListener('characteristicvaluechanged',e=>readState(e.target.value));
+    $('dot').classList.add('on');
+    $('status').textContent=dev.name||'connected';
+    $('connect').textContent='Connected';
+  }catch(e){
+    $('status').textContent='failed';
+    console.error(e);
+  }
+};
+
+// state packet: mode,patch,scale,root,arp,arpdiv,chord,kit,octave(i8),
+//               bend,loopState,quant,flags, tempo(u16), cutoff(u16), events(u16), level
+function readState(dv){
+  try{
+    $('patch').value=dv.getUint8(1); $('scale').value=dv.getUint8(2);
+    $('root').value=dv.getUint8(3);  $('arp').value=dv.getUint8(4);
+    $('arpdiv').value=dv.getUint8(5);$('chord').value=dv.getUint8(6);
+    $('kit').value=dv.getUint8(7);
+    const oct=dv.getInt8(8); $('oct').value=oct+3; $('octV').textContent=(oct>=0?'+':'')+oct;
+    const bend=dv.getUint8(9); $('bend').value=bend; $('bendV').textContent=bend+' st';
+    const ls=dv.getUint8(10); Object.entries(loopBtns).forEach(([k,b])=>b.classList.toggle('on',+k===ls));
+    $('quant').value=dv.getUint8(11);
+    const f=dv.getUint8(12);
+    $('hold').classList.toggle('on',!!(f&1));
+    $('metro').classList.toggle('on',!!(f&2));
+    $('delay').classList.toggle('on',!!(f&4));
+    $('overdub').classList.toggle('on',!!(f&8));
+    const tempo=dv.getUint16(13,true); $('tempo').value=tempo; $('tempoV').textContent=tempo;
+    $('evCount').textContent=dv.getUint16(17,true);
+    $('meter').style.width=(dv.getUint8(19)/255*100)+'%';
+    const m=dv.getUint8(0)!==0;
+    if(m!==drums){ drums=m; $('mSynth').classList.toggle('on',!m); $('mDrums').classList.toggle('on',m); buildPads(); }
+  }catch(e){ /* packet shape changed — ignore this frame */ }
+}
+</script>
+</body>
+</html>
