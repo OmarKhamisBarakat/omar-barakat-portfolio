@@ -3,236 +3,296 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Synth Studio — Omar Khamis</title>
+<title>SynthSizer — Omar Khamis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
+  /* the site's own display face, same file the portfolio serves */
+  @font-face{
+    font-family:'DeskBuddy Pixel';
+    src:url('/fonts/deskbuddy.woff2') format('woff2'),
+        url('/fonts/deskbuddy.ttf') format('truetype');
+    font-display:swap;
+  }
   :root{
     --font-sans:'Inter',ui-sans-serif,system-ui,sans-serif;
     --font-mono:'JetBrains Mono',ui-monospace,monospace;
+    --font-pixel:'DeskBuddy Pixel',ui-monospace,monospace;
     --ink:#0B0A12; --ink-2:#100E1B;
     --pink:#FF4FA3; --teal:#45E0D8; --amber:#FFB347;
-    --on-surface:#EDEBF5; --dim:#9A97AD;
+    --w90:rgba(237,235,245,.90); --w80:rgba(237,235,245,.80);
+    --w50:rgba(237,235,245,.50); --w35:rgba(237,235,245,.35);
+    --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.20);
+    --card:rgba(255,255,255,.02);
     --outline:#2A2740;
-    --card:rgba(255,255,255,.02); --line:rgba(255,255,255,.10);
-    --vice:linear-gradient(100deg,#FF4FA3 8%,#FFB347 50%,#45E0D8 92%);
   }
   *{box-sizing:border-box}
   html,body{margin:0}
   body{
-    background:var(--ink); color:var(--on-surface); font-family:var(--font-sans);
-    -webkit-font-smoothing:antialiased; line-height:1.5;
-    padding:max(14px,env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));
+    background:var(--ink); color:var(--w90); font-family:var(--font-sans);
+    -webkit-font-smoothing:antialiased; line-height:1.6;
+    padding:max(28px,env(safe-area-inset-top)) 20px calc(48px + env(safe-area-inset-bottom));
   }
-  .wrap{max-width:900px;margin:0 auto}
-  header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-  h1{font-size:clamp(1.3rem,4.5vw,1.9rem);margin:0;font-weight:700;letter-spacing:-.02em;
-     background:var(--vice);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .sub{font-family:var(--font-mono);font-size:.66rem;color:var(--dim);letter-spacing:.14em;
-       text-transform:uppercase;width:100%;margin-top:-6px}
-  .spacer{flex:1}
-  button,select{font-family:inherit;color:inherit}
-  .btn{background:var(--pink);color:#0B0A12;border:0;border-radius:10px;padding:9px 15px;
-       font-weight:600;font-size:.86rem;cursor:pointer;transition:transform .08s,filter .15s}
-  .btn:hover{filter:brightness(1.08)} .btn:active{transform:scale(.97)}
-  .btn.ghost{background:transparent;color:var(--on-surface);border:1px solid var(--line)}
-  .dot{width:9px;height:9px;border-radius:50%;background:#5b5870;flex:none}
-  .dot.on{background:var(--teal);animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(69,224,216,.5)}70%{box-shadow:0 0 0 7px rgba(69,224,216,0)}100%{box-shadow:0 0 0 0 rgba(69,224,216,0)}}
-  .status{font-family:var(--font-mono);font-size:.7rem;color:var(--dim)}
+  .wrap{max-width:940px;margin:0 auto}
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-        padding:14px;margin-bottom:12px}
-  .card h2{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;
-           color:var(--dim);margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
-  .card h2 .spacer{flex:1}
+  /* ---- type ---- */
+  .eyebrow{
+    font-family:var(--font-pixel); font-size:.66rem; letter-spacing:.28em;
+    text-transform:uppercase; color:var(--pink); margin:0 0 14px;
+  }
+  h1{
+    font-family:var(--font-pixel); font-size:clamp(1.9rem,5.5vw,3rem);
+    line-height:1.05; color:var(--w90); margin:0; font-weight:400;
+  }
+  .lede{color:var(--w50);margin:14px 0 0;max-width:38rem}
 
-  /* transport */
-  .transport{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .tbtn{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);
-        cursor:pointer;font-size:1.1rem;display:grid;place-items:center;transition:.12s}
-  .tbtn.play.on{background:rgba(69,224,216,.18);border-color:var(--teal);color:var(--teal)}
-  .tbtn.rec.on{background:rgba(255,79,163,.20);border-color:var(--pink);color:var(--pink);
-               animation:blink 1s steps(2) infinite}
-  @keyframes blink{50%{opacity:.45}}
-  .tnum{display:flex;flex-direction:column;gap:2px;min-width:74px}
-  .tnum span{font-family:var(--font-mono);font-size:.6rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
-  .tnum input{width:100%}
-  .seg{display:flex;gap:5px;flex-wrap:wrap}
-  .seg button{background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 12px;
-              font-size:.78rem;cursor:pointer;font-family:var(--font-mono);color:var(--dim)}
-  .seg button.on{background:rgba(69,224,216,.14);border-color:var(--teal);color:var(--on-surface)}
+  header{margin-bottom:44px}
+  .headrow{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .headrow .grow{flex:1;min-width:220px}
 
-  /* sequencer grid */
-  .gridwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
-  .grid{display:grid;grid-template-columns:64px repeat(16,minmax(24px,1fr));gap:3px;min-width:520px}
-  .rlabel{font-family:var(--font-mono);font-size:.62rem;color:var(--dim);display:flex;align-items:center;
-          padding-right:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cell{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.045);border:1px solid transparent;
-        cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .1s,transform .06s}
-  .cell.beat{background:rgba(255,255,255,.085)}
-  .cell.on{background:var(--pink);box-shadow:0 0 10px rgba(255,79,163,.45)}
-  .cell.head{outline:2px solid var(--teal);outline-offset:-2px}
-  .cell:active{transform:scale(.88)}
-  .steprow{display:grid;grid-template-columns:64px repeat(16,minmax(24px,1fr));gap:3px;min-width:520px;margin-bottom:5px}
-  .stepnum{font-family:var(--font-mono);font-size:.55rem;color:#5b5870;text-align:center}
+  /* ---- controls ---- */
+  button,select,input{font-family:inherit;color:inherit}
+  .btn{
+    font-family:var(--font-pixel); font-size:.78rem; letter-spacing:.06em;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:13px 22px; border-radius:12px; border:0; cursor:pointer;
+    background:var(--pink); color:var(--ink);
+    transition:transform .18s ease, border-color .18s ease;
+  }
+  .btn:hover{transform:translateY(-2px)}
+  .btn.ghost{background:transparent;color:var(--w80);border:1px solid var(--line-2)}
+  .btn.ghost:hover{border-color:rgba(255,255,255,.5)}
+
+  .chip{
+    font-family:var(--font-pixel); font-size:.6rem; letter-spacing:.1em;
+    padding:5px 10px; border-radius:6px; border:1px solid;
+    color:var(--teal); border-color:rgba(69,224,216,.27); background:rgba(69,224,216,.07);
+    display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+  }
+  .chip.off{color:var(--w35);border-color:var(--line);background:transparent}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+
+  section{margin-bottom:34px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .card + .card{margin-top:14px}
+  .label{
+    font-family:var(--font-pixel);font-size:.6rem;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--w35);margin:0 0 16px;display:flex;align-items:center;gap:10px;
+  }
+  .label .grow{flex:1}
+
+  /* ---- transport ---- */
+  .transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .tbtn{
+    width:48px;height:48px;border-radius:12px;border:1px solid var(--line-2);
+    background:transparent;cursor:pointer;font-size:1rem;display:grid;place-items:center;
+    color:var(--w80);transition:.18s;
+  }
+  .tbtn:hover{border-color:rgba(255,255,255,.5)}
+  .tbtn.play.on{background:rgba(69,224,216,.12);border-color:var(--teal);color:var(--teal)}
+  .tbtn.rec.on{background:rgba(255,79,163,.14);border-color:var(--pink);color:var(--pink)}
+  .tnum{display:flex;flex-direction:column;gap:4px;min-width:96px}
+  .tnum .k{font-family:var(--font-pixel);font-size:.58rem;letter-spacing:.2em;
+           text-transform:uppercase;color:var(--w35)}
+  .tnum .k b{color:var(--w80);font-weight:400}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{
+    font-family:var(--font-pixel);font-size:.66rem;letter-spacing:.08em;
+    background:transparent;border:1px solid var(--line);border-radius:8px;
+    padding:9px 14px;cursor:pointer;color:var(--w35);transition:.18s;
+  }
+  .seg button.on{color:var(--teal);border-color:rgba(69,224,216,.4);background:rgba(69,224,216,.08)}
+
+  /* ---- grid ---- */
+  .gridwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+  .steprow,.grid,.mel{display:grid;grid-template-columns:70px repeat(16,minmax(26px,1fr));
+                      gap:4px;min-width:560px}
+  .steprow{margin-bottom:7px}
+  .stepnum{font-family:var(--font-mono);font-size:.58rem;color:var(--w35);text-align:center}
   .stepnum.head{color:var(--teal)}
+  .rlabel{font-family:var(--font-mono);font-size:.62rem;color:var(--w50);display:flex;
+          align-items:center;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cell{aspect-ratio:1;border-radius:6px;background:rgba(255,255,255,.04);
+        border:1px solid transparent;cursor:pointer;-webkit-tap-highlight-color:transparent;
+        transition:background .12s,transform .07s}
+  .cell.beat{background:rgba(255,255,255,.075)}
+  .cell.on{background:var(--pink);border-color:var(--pink)}
+  .cell.head{border-color:var(--teal)}
+  .cell:active{transform:scale(.9)}
+  .mel{margin-top:8px}
+  .mcell{aspect-ratio:1;border-radius:6px;background:rgba(255,255,255,.04);cursor:pointer;
+         display:grid;place-items:center;font-family:var(--font-mono);font-size:.5rem;
+         color:var(--w50);border:1px solid transparent;-webkit-tap-highlight-color:transparent}
+  .mcell.set{background:rgba(255,179,71,.22);border-color:rgba(255,179,71,.55);color:var(--w90)}
+  .mcell.sel{border-color:var(--amber)}
+  .mcell.head{box-shadow:inset 0 0 0 1px rgba(69,224,216,.7)}
 
-  /* melody lane */
-  .mel{display:grid;grid-template-columns:64px repeat(16,minmax(24px,1fr));gap:3px;min-width:520px;margin-top:6px}
-  .mcell{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.045);cursor:pointer;
-         display:grid;place-items:center;font-family:var(--font-mono);font-size:.5rem;color:var(--dim);
-         border:1px solid transparent;-webkit-tap-highlight-color:transparent}
-  .mcell.set{background:rgba(255,179,71,.28);color:var(--on-surface);border-color:var(--amber)}
-  .mcell.sel{outline:2px solid var(--amber);outline-offset:-2px}
-  .mcell.head{box-shadow:inset 0 0 0 2px rgba(69,224,216,.6)}
+  /* ---- keyboard ---- */
+  .keys{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+  .key{height:60px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.045);
+       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+       cursor:pointer;user-select:none;-webkit-user-select:none;
+       -webkit-tap-highlight-color:transparent;transition:.08s}
+  .key.blk{background:rgba(255,255,255,.012);color:var(--w50)}
+  .key .lbl{font-size:.82rem;font-weight:600}
+  .key .idx{font-family:var(--font-mono);font-size:.52rem;color:var(--w35)}
+  .key:active,.key.hit{background:rgba(255,79,163,.22);border-color:var(--pink);transform:scale(.96)}
 
-  /* keyboard */
-  .keys{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
-  .key{height:56px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.05);
-       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;
-       user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;transition:.07s}
-  .key.blk{background:rgba(255,255,255,.015);color:var(--dim)}
-  .key .lbl{font-size:.8rem;font-weight:600}
-  .key .idx{font-family:var(--font-mono);font-size:.52rem;color:#5b5870}
-  .key:active,.key.hit{background:rgba(255,79,163,.3);border-color:var(--pink);transform:scale(.95)}
-
-  .row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+  /* ---- rows ---- */
+  .row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
   .row:last-child{border-bottom:0}
-  .row label{flex:1;font-size:.85rem}
-  .row .val{font-family:var(--font-mono);font-size:.72rem;color:var(--teal);min-width:50px;text-align:right}
-  select{background:var(--ink-2);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:.82rem;min-width:104px}
-  input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;flex:1.4;min-width:90px}
-  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--outline)}
-  input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--outline)}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
-    background:var(--pink);margin-top:-5.5px;border:0}
+  .row label{flex:1;font-size:.88rem;color:var(--w80)}
+  .row .val{font-family:var(--font-mono);font-size:.72rem;color:var(--teal);min-width:54px;text-align:right}
+  select{background:var(--ink-2);border:1px solid var(--line);border-radius:8px;
+         padding:8px 10px;font-size:.83rem;min-width:112px}
+  input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;flex:1.4;min-width:96px}
+  input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:var(--outline)}
+  input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:var(--outline)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;
+    border-radius:50%;background:var(--pink);margin-top:-6px;border:0}
   input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--pink);border:0}
-  .toggle{width:44px;height:25px;border-radius:999px;background:var(--outline);border:0;position:relative;cursor:pointer;flex:none}
-  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;
-                 background:var(--on-surface);transition:transform .18s}
-  .toggle.on{background:var(--pink)} .toggle.on::after{transform:translateX(19px);background:#0B0A12}
+  .toggle{width:44px;height:25px;border-radius:999px;background:var(--outline);border:0;
+          position:relative;cursor:pointer;flex:none;transition:background .18s}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;
+                 border-radius:50%;background:var(--w80);transition:transform .18s}
+  .toggle.on{background:var(--pink)} .toggle.on::after{transform:translateX(19px);background:var(--ink)}
 
-  .tabs{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
-  .tab{background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 13px;
-       font-size:.78rem;cursor:pointer;color:var(--dim);font-family:var(--font-mono)}
-  .tab.active{background:rgba(255,79,163,.14);border-color:var(--pink);color:var(--on-surface)}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{font-family:var(--font-pixel);font-size:.64rem;letter-spacing:.1em;
+       background:transparent;border:1px solid var(--line);border-radius:999px;
+       padding:8px 15px;cursor:pointer;color:var(--w35);transition:.18s}
+  .tab.active{color:var(--pink);border-color:rgba(255,79,163,.4);background:rgba(255,79,163,.07)}
   .panel{display:none} .panel.active{display:block}
 
-  .meter{height:5px;border-radius:3px;background:var(--outline);overflow:hidden;margin-top:10px}
-  .meter i{display:block;height:100%;width:0;background:var(--vice);transition:width .07s linear}
-  .note{font-size:.76rem;color:var(--dim);line-height:1.6;border-left:2px solid var(--amber);padding-left:11px}
-  .note b{color:var(--on-surface)}
+  .meter{height:3px;border-radius:2px;background:var(--outline);overflow:hidden;margin-top:16px}
+  .meter i{display:block;height:100%;width:0;background:var(--teal);transition:width .07s linear}
+  .note{font-size:.84rem;color:var(--w50);line-height:1.75}
+  .note b{color:var(--w80);font-weight:600}
   code{font-family:var(--font-mono);font-size:.85em;color:var(--amber)}
-  .hint{font-size:.68rem;color:#5b5870;margin-top:8px;font-family:var(--font-mono)}
-  footer{font-family:var(--font-mono);font-size:.64rem;color:#5b5870;text-align:center;margin-top:20px}
+  .hint{font-size:.76rem;color:var(--w35);margin-top:12px}
+  footer{font-family:var(--font-pixel);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
+         color:var(--w35);text-align:center;margin-top:44px}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
-    <h1>Synth Studio</h1>
-    <div class="spacer"></div>
-    <span class="dot" id="dot"></span><span class="status" id="status">offline</span>
-    <button class="btn" id="connect">Connect</button>
-    <button class="btn ghost" id="scanAll">Scan all</button>
-    <div class="sub">ESP32-S3 · step sequencer · bluetooth le</div>
+    <p class="eyebrow">ESP32-S3 · Bluetooth LE</p>
+    <div class="headrow">
+      <div class="grow">
+        <h1>SynthSizer</h1>
+        <p class="lede">A sixteen-step sequencer and remote control for the hardware synth.
+          Program patterns, play notes, and shape the voice — over Bluetooth.</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="chip off" id="chip"><span class="dot"></span><span id="status">Offline</span></span>
+        <button class="btn" id="connect">Connect</button>
+        <button class="btn ghost" id="scanAll">Scan all</button>
+      </div>
+    </div>
   </header>
 
-  <!-- TRANSPORT -->
-  <div class="card">
-    <h2>Transport</h2>
-    <div class="transport">
-      <button class="tbtn play" id="play" title="Play / Stop">▶</button>
-      <button class="tbtn rec" id="rec" title="Record live hits into the grid">●</button>
-      <button class="btn ghost" id="clear">Clear</button>
-      <div class="tnum"><span>Tempo <b id="bpmV">110</b></span>
-        <input type="range" id="bpm" min="50" max="220" value="110"></div>
-      <div class="tnum"><span>Steps <b id="lenV">16</b></span>
-        <input type="range" id="len" min="1" max="16" value="16"></div>
-      <div class="spacer"></div>
-      <div class="seg"><button id="mSynth" class="on">Synth</button><button id="mDrums">Drums</button></div>
+  <section>
+    <div class="card">
+      <p class="label">Transport<span class="grow"></span></p>
+      <div class="transport">
+        <button class="tbtn play" id="play" title="Play / Stop">▶</button>
+        <button class="tbtn rec" id="rec" title="Record live hits into the grid">●</button>
+        <button class="btn ghost" id="clear">Clear</button>
+        <div class="tnum"><span class="k">Tempo <b id="bpmV">110</b></span>
+          <input type="range" id="bpm" min="50" max="220" value="110"></div>
+        <div class="tnum"><span class="k">Steps <b id="lenV">16</b></span>
+          <input type="range" id="len" min="1" max="16" value="16"></div>
+        <div class="grow" style="flex:1"></div>
+        <div class="seg"><button id="mSynth" class="on">Synth</button><button id="mDrums">Drums</button></div>
+      </div>
+      <div class="meter"><i id="meter"></i></div>
     </div>
-    <div class="meter"><i id="meter"></i></div>
-  </div>
+  </section>
 
-  <!-- SEQUENCER -->
-  <div class="card">
-    <h2>Pattern <span class="spacer"></span>
-      <select id="preset" style="min-width:130px">
-        <option value="">load preset…</option>
-        <option>Four on floor</option><option>Boom bap</option>
-        <option>Trap</option><option>Breakbeat</option><option>Random</option>
-      </select>
-    </h2>
-    <div class="gridwrap">
-      <div class="steprow" id="steprow"></div>
-      <div class="grid" id="grid"></div>
-      <div class="mel" id="mel"></div>
+  <section>
+    <div class="card">
+      <p class="label">Pattern<span class="grow"></span>
+        <select id="preset" style="min-width:134px">
+          <option value="">Load preset…</option>
+          <option>Four on floor</option><option>Boom bap</option>
+          <option>Trap</option><option>Breakbeat</option><option>Random</option>
+        </select>
+      </p>
+      <div class="gridwrap">
+        <div class="steprow" id="steprow"></div>
+        <div class="grid" id="grid"></div>
+        <div class="mel" id="mel"></div>
+      </div>
+      <p class="hint">Tap cells to program drums. Tap a melody slot, then hit a key to place a note —
+        the slot auto-advances. Tap a filled slot again to clear it.</p>
     </div>
-    <div class="hint">Tap cells to program drums. Tap a melody slot then hit a key to place a note —
-      it auto-advances. Tap a filled slot twice to clear it.</div>
-  </div>
+  </section>
 
-  <!-- KEYBOARD -->
-  <div class="card">
-    <h2>Keyboard <span class="spacer"></span><span class="status" id="kbMode">notes</span></h2>
-    <div class="keys" id="keys"></div>
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" data-p="synth">Synth</button>
-    <button class="tab" data-p="drums">Drums</button>
-    <button class="tab" data-p="fx">FX</button>
-    <button class="tab" data-p="help">Connect</button>
-  </div>
-
-  <div class="card panel active" id="p-synth">
-    <h2>Synth</h2>
-    <div class="row"><label>Patch</label><select id="patch"></select></div>
-    <div class="row"><label>Scale</label><select id="scale"></select></div>
-    <div class="row"><label>Root</label><select id="root"></select></div>
-    <div class="row"><label>Octave</label><input type="range" id="oct" min="0" max="6" value="3"><span class="val" id="octV">0</span></div>
-    <div class="row"><label>Bend range</label><input type="range" id="bend" min="0" max="12" value="7"><span class="val" id="bendV">7 st</span></div>
-    <div class="row"><label>Arp</label><select id="arp"></select></div>
-    <div class="row"><label>Arp division</label><select id="arpdiv"></select></div>
-    <div class="row"><label>Chord shape</label><select id="chord"></select></div>
-    <div class="row"><label>Hold</label><button class="toggle" id="hold"></button></div>
-  </div>
-
-  <div class="card panel" id="p-drums">
-    <h2>Drums</h2>
-    <div class="row"><label>Kit</label><select id="kit"></select></div>
-    <div class="row"><label>Tune</label><input type="range" id="dtune" min="0" max="1000" value="430"><span class="val" id="dtuneV">43%</span></div>
-    <div class="row"><label>Decay</label><input type="range" id="ddecay" min="0" max="1000" value="430"><span class="val" id="ddecayV">43%</span></div>
-    <div class="row"><label>Punch</label><input type="range" id="dpunch" min="0" max="1000" value="500"><span class="val" id="dpunchV">50%</span></div>
-    <div class="row"><label>Tone</label><input type="range" id="dnoise" min="0" max="1000" value="620"><span class="val" id="dnoiseV">62%</span></div>
-    <div class="row"><label>Level</label><input type="range" id="dlevel" min="0" max="1000" value="620"><span class="val" id="dlevelV">62%</span></div>
-  </div>
-
-  <div class="card panel" id="p-fx">
-    <h2>Effects</h2>
-    <div class="row"><label>Delay</label><button class="toggle" id="delay"></button></div>
-    <div class="row"><label>Delay time</label><input type="range" id="dtime" min="40" max="295" value="250"><span class="val" id="dtimeV">250ms</span></div>
-    <div class="row"><label>Feedback</label><input type="range" id="dfbk" min="0" max="1000" value="440"><span class="val" id="dfbkV">44%</span></div>
-    <div class="row"><label>Bitcrush</label><input type="range" id="crush" min="0" max="1000" value="0"><span class="val" id="crushV">0%</span></div>
-    <div class="row"><label>Metronome</label><button class="toggle" id="metro"></button></div>
-  </div>
-
-  <div class="card panel" id="p-help">
-    <h2>Connecting</h2>
-    <div class="note">
-      Needs <b>Web Bluetooth</b> over HTTPS.<br>
-      <b>Windows / Android:</b> Chrome or Edge.<br>
-      <b>iPhone / iPad:</b> Safari has none — use <b>Bluefy</b> (free, App Store).<br>
-      Power the synth, tap <b>Connect</b>, pick <code>Synth</code>. Not listed?
-      Try <b>Scan all</b>, or power-cycle the synth and toggle Bluetooth.
+  <section>
+    <div class="card">
+      <p class="label">Keyboard<span class="grow"></span><span id="kbMode">Notes</span></p>
+      <div class="keys" id="keys"></div>
     </div>
-  </div>
+  </section>
 
-  <footer>omarkhamisbarakat.me · synth studio v2</footer>
+  <section>
+    <div class="tabs">
+      <button class="tab active" data-p="synth">Synth</button>
+      <button class="tab" data-p="drums">Drums</button>
+      <button class="tab" data-p="fx">Effects</button>
+      <button class="tab" data-p="help">Connect</button>
+    </div>
+
+    <div class="card panel active" id="p-synth">
+      <p class="label">Voice</p>
+      <div class="row"><label>Patch</label><select id="patch"></select></div>
+      <div class="row"><label>Scale</label><select id="scale"></select></div>
+      <div class="row"><label>Root</label><select id="root"></select></div>
+      <div class="row"><label>Octave</label><input type="range" id="oct" min="0" max="6" value="3"><span class="val" id="octV">0</span></div>
+      <div class="row"><label>Bend range</label><input type="range" id="bend" min="0" max="12" value="7"><span class="val" id="bendV">7 st</span></div>
+      <div class="row"><label>Arpeggiator</label><select id="arp"></select></div>
+      <div class="row"><label>Arp division</label><select id="arpdiv"></select></div>
+      <div class="row"><label>Chord shape</label><select id="chord"></select></div>
+      <div class="row"><label>Hold</label><button class="toggle" id="hold"></button></div>
+    </div>
+
+    <div class="card panel" id="p-drums">
+      <p class="label">Kit</p>
+      <div class="row"><label>Kit</label><select id="kit"></select></div>
+      <div class="row"><label>Tune</label><input type="range" id="dtune" min="0" max="1000" value="430"><span class="val" id="dtuneV">43%</span></div>
+      <div class="row"><label>Decay</label><input type="range" id="ddecay" min="0" max="1000" value="430"><span class="val" id="ddecayV">43%</span></div>
+      <div class="row"><label>Punch</label><input type="range" id="dpunch" min="0" max="1000" value="500"><span class="val" id="dpunchV">50%</span></div>
+      <div class="row"><label>Tone</label><input type="range" id="dnoise" min="0" max="1000" value="620"><span class="val" id="dnoiseV">62%</span></div>
+      <div class="row"><label>Level</label><input type="range" id="dlevel" min="0" max="1000" value="620"><span class="val" id="dlevelV">62%</span></div>
+    </div>
+
+    <div class="card panel" id="p-fx">
+      <p class="label">Effects</p>
+      <div class="row"><label>Delay</label><button class="toggle" id="delay"></button></div>
+      <div class="row"><label>Delay time</label><input type="range" id="dtime" min="40" max="295" value="250"><span class="val" id="dtimeV">250ms</span></div>
+      <div class="row"><label>Feedback</label><input type="range" id="dfbk" min="0" max="1000" value="440"><span class="val" id="dfbkV">44%</span></div>
+      <div class="row"><label>Bitcrush</label><input type="range" id="crush" min="0" max="1000" value="0"><span class="val" id="crushV">0%</span></div>
+      <div class="row"><label>Metronome</label><button class="toggle" id="metro"></button></div>
+    </div>
+
+    <div class="card panel" id="p-help">
+      <p class="label">Connecting</p>
+      <p class="note">
+        This page talks to the synth with <b>Web Bluetooth</b>, which needs HTTPS.<br>
+        <b>Windows and Android</b> — Chrome or Edge, works as-is.<br>
+        <b>iPhone and iPad</b> — Safari has no Web Bluetooth. Open this page in
+        <b>Bluefy</b>, a free WebBLE browser on the App Store.<br>
+        Power the synth, choose <b>Connect</b>, and pick <code>SynthSizer</code>.
+        If it is not listed, try <b>Scan all</b>, or power-cycle the synth and
+        toggle Bluetooth off and on.
+      </p>
+    </div>
+  </section>
+
+  <footer>omarkhamisbarakat.me</footer>
 </div>
 
 <script>
@@ -248,15 +308,15 @@ const P={MODE:0,PATCH:1,SCALE:2,ROOT:3,OCT:4,BEND:5,ARP:6,ARPDIV:7,CHORD:8,
   SEQPLAY:25,SEQREC:26,SEQLEN:27,SEQCLEAR:28,SEQTOGGLE:29,SEQMEL:30};
 
 const PATCHES=['Organ','Flute','Guitar','EPiano','Bell','Brass','Bass','Strings','Reed','Pluck'];
-const SCALEDEF=[{n:'Chrom',len:12,st:[0,1,2,3,4,5,6,7,8,9,10,11]},
+const SCALEDEF=[{n:'Chromatic',len:12,st:[0,1,2,3,4,5,6,7,8,9,10,11]},
   {n:'Major',len:7,st:[0,2,4,5,7,9,11]},{n:'Minor',len:7,st:[0,2,3,5,7,8,10]},
-  {n:'Dorian',len:7,st:[0,2,3,5,7,9,10]},{n:'Penta',len:5,st:[0,2,4,7,9]},
+  {n:'Dorian',len:7,st:[0,2,3,5,7,9,10]},{n:'Pentatonic',len:5,st:[0,2,4,7,9]},
   {n:'Blues',len:6,st:[0,3,5,6,7,10]}];
 const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const BLACK=[1,3,6,8,10];
-const ARPS=['Off','Up','Down','UpDn','Rand'];
+const ARPS=['Off','Up','Down','Up-Down','Random'];
 const DIVS=['1/4','1/8','1/8T','1/16'];
-const CHORDS=['Oct','Maj','Min','Sus4','5th'];
+const CHORDS=['Octave','Major','Minor','Sus4','Fifth'];
 const KITS=['Studio','808','Lo-fi','Deep'];
 const DRUMS=['Kick','Snare','Hat','OpenHat','TomLo','TomMid','TomHi','Clap',
              'Rim','Cowbell','Shaker','Zap','Kick808','Rimshot','Crash','Floor'];
@@ -283,13 +343,11 @@ async function send(id,val){
   const v=Math.max(0,Math.min(65535,Math.round(val)));
   try{ await ctrlCh.writeValueWithoutResponse(new Uint8Array([id,v&255,v>>8])); }catch(e){}
 }
-// mirror the firmware's scale maths so labels match what you'll actually hear
 function keySemi(k){const s=SCALEDEF[scaleIdx]; if(s.len>=12) return k;
   return s.st[k%s.len]+12*Math.floor(k/s.len);}
 function noteLabel(k){const st=keySemi(k)+12*octave+rootNote;
   const nn=((st%12)+12)%12; return {name:NOTES[nn]+(4+Math.floor(st/12)), black:BLACK.includes(nn)};}
 
-/* ---------- sequencer grid ---------- */
 function buildGrid(){
   const sr=$('steprow'); sr.innerHTML='<div></div>';
   for(let s=0;s<16;s++){const d=document.createElement('div');d.className='stepnum';d.dataset.s=s;
@@ -342,10 +400,9 @@ function paint(){
   });
 }
 
-/* ---------- keyboard ---------- */
 function buildKeys(){
   const k=$('keys'); k.innerHTML='';
-  $('kbMode').textContent = drums?'drum pads':'notes';
+  $('kbMode').textContent = drums?'Drum pads':'Notes';
   for(let i=0;i<16;i++){
     const b=document.createElement('div');
     const info=drums?{name:DRUMS[i],black:false}:noteLabel(i);
@@ -364,7 +421,6 @@ function buildKeys(){
   }
 }
 
-/* ---------- transport ---------- */
 $('play').onclick=()=>{seqPlaying=!seqPlaying;$('play').classList.toggle('on',seqPlaying);
   send(P.SEQPLAY,seqPlaying?1:0);paint();};
 $('rec').onclick=()=>{seqRec=!seqRec;$('rec').classList.toggle('on',seqRec);send(P.SEQREC,seqRec?1:0);};
@@ -388,7 +444,6 @@ $('preset').onchange=async e=>{
   }
   await sendPattern(); paint();
 };
-// whole grid in one 48-byte write instead of 256 toggles
 async function sendPattern(){
   if(!pattCh) return;
   const b=new Uint8Array(48);
@@ -397,7 +452,6 @@ async function sendPattern(){
   try{ await pattCh.writeValueWithoutResponse(b); }catch(e){ console.error(e); }
 }
 
-/* ---------- tabs + controls ---------- */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
@@ -426,21 +480,23 @@ bindRange('crush',P.CRUSH,r=>Math.round(r/10)+'%');
 function bindToggle(el,id){const b=$(el);b.onclick=()=>{b.classList.toggle('on');send(id,b.classList.contains('on')?1:0)}}
 bindToggle('hold',P.HOLD); bindToggle('delay',P.DELAY); bindToggle('metro',P.METRO);
 
-/* ---------- bluetooth ---------- */
+function setStatus(txt,on){
+  $('status').textContent=txt;
+  $('chip').classList.toggle('off',!on);
+}
 async function doConnect(all){
   if(!navigator.bluetooth){
-    $('status').textContent='no Web Bluetooth';
-    alert('This browser has no Web Bluetooth.\n\niPhone/iPad: open this page in Bluefy.\nWindows/Android: Chrome or Edge.');
+    setStatus('Unsupported',false);
+    alert('This browser has no Web Bluetooth.\n\niPhone or iPad: open this page in Bluefy.\nWindows or Android: use Chrome or Edge.');
     return;
   }
   try{
-    $('status').textContent='scanning…';
+    setStatus('Scanning',false);
     const opts=all?{acceptAllDevices:true,optionalServices:[SVC]}
                   :{filters:[{services:[SVC]},{namePrefix:'Synth'}],optionalServices:[SVC]};
     const dev=await navigator.bluetooth.requestDevice(opts);
     dev.addEventListener('gattserverdisconnected',()=>{
-      ctrlCh=pattCh=null;$('dot').classList.remove('on');
-      $('status').textContent='disconnected';$('connect').textContent='Connect';});
+      ctrlCh=pattCh=null;setStatus('Disconnected',false);$('connect').textContent='Connect';});
     const srv=await dev.gatt.connect();
     const svc=await srv.getPrimaryService(SVC);
     ctrlCh=await svc.getCharacteristic(CTRL);
@@ -448,19 +504,17 @@ async function doConnect(all){
     const st=await svc.getCharacteristic(STATE);
     await st.startNotifications();
     st.addEventListener('characteristicvaluechanged',e=>readState(e.target.value));
-    $('dot').classList.add('on');$('status').textContent=dev.name||'connected';
+    setStatus(dev.name||'Connected',true);
     $('connect').textContent='Connected';
     await sendPattern();
   }catch(e){
-    $('status').textContent=(e&&e.name==='NotFoundError')?'nothing picked':'failed';
+    setStatus((e&&e.name==='NotFoundError')?'Cancelled':'Failed',false);
     console.error(e);
   }
 }
 $('connect').onclick=()=>doConnect(false);
 $('scanAll').onclick=()=>doConnect(true);
 
-// mode,patch,scale,root,arp,arpdiv,chord,kit, octave(i8), bend, flags,
-// seqStep, seqLen, tempo(u16), cutoff(u16), level
 function readState(dv){
   try{
     $('patch').value=dv.getUint8(1);
@@ -468,20 +522,19 @@ function readState(dv){
     $('scale').value=sc; $('root').value=rt;
     $('arp').value=dv.getUint8(4); $('arpdiv').value=dv.getUint8(5);
     $('chord').value=dv.getUint8(6); $('kit').value=dv.getUint8(7);
-    const oc=dv.getInt8(8);
-    const bend=dv.getUint8(9);
+    const oc=dv.getInt8(8), bend=dv.getUint8(9);
     $('oct').value=oc+3;$('octV').textContent=(oc>=0?'+':'')+oc;
     $('bend').value=bend;$('bendV').textContent=bend+' st';
     const f=dv.getUint8(10);
     $('hold').classList.toggle('on',!!(f&1));
     $('metro').classList.toggle('on',!!(f&2));
     $('delay').classList.toggle('on',!!(f&4));
-    const wasPlaying=seqPlaying;
     seqPlaying=!!(f&8); seqRec=!!(f&16);
     $('play').classList.toggle('on',seqPlaying);
     $('rec').classList.toggle('on',seqRec);
     playhead=dv.getUint8(11);
-    const nl=dv.getUint8(12); if(nl>=1&&nl<=16&&nl!==seqLen){seqLen=nl;$('len').value=nl;$('lenV').textContent=nl;}
+    const nl=dv.getUint8(12);
+    if(nl>=1&&nl<=16&&nl!==seqLen){seqLen=nl;$('len').value=nl;$('lenV').textContent=nl;}
     const tempo=dv.getUint16(13,true);
     if(document.activeElement!==$('bpm')){$('bpm').value=tempo;$('bpmV').textContent=tempo;}
     $('meter').style.width=(dv.getUint8(17)/255*100)+'%';
