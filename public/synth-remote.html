@@ -59,6 +59,16 @@
     margin:0 0 14px;display:flex;align-items:center;gap:10px}
   .label .grow{flex:1}
 
+  /* sticky DAW transport bar */
+  .tbar{position:sticky;top:0;z-index:30;margin:0 -18px 24px;padding:12px 18px;
+    background:rgba(11,10,18,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line)}
+  .tbar-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .tbar .grow{flex:1;min-width:8px}
+  .pos{font-family:var(--font-mono);display:flex;align-items:baseline;gap:1px}
+  .pos .posstep{font-size:1.15rem;color:var(--teal);font-variant-numeric:tabular-nums}
+  .pos .posdiv,.pos .poslen{color:var(--w35);font-size:.8rem}
+  .tbar-meter{flex-basis:100%;margin-top:4px}
   /* transport */
   .transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .tbtn{width:48px;height:48px;border-radius:12px;border:1px solid var(--line-2);background:transparent;cursor:pointer;
@@ -88,6 +98,22 @@
   .cell.on{background:var(--pink);border-color:var(--pink)}
   .cell.head{border-color:var(--teal)}
   .cell:active{transform:scale(.9)}
+  /* pattern slots */
+  .slots{display:inline-flex;gap:5px}
+  .slots button{font-family:var(--font-pixel);font-size:.66rem;width:30px;height:30px;border-radius:8px;
+    border:1px solid var(--line);background:transparent;color:var(--w50);cursor:pointer;transition:.15s}
+  .slots button.on{color:var(--ink);background:var(--pink);border-color:var(--pink)}
+  /* piano roll */
+  .rollhead{font-family:var(--font-pixel);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--w35);margin:14px 0 6px;min-width:560px}
+  .roll{display:grid;grid-template-columns:70px repeat(16,minmax(24px,1fr));gap:4px;min-width:560px}
+  .rlab{font-family:var(--font-mono);font-size:.55rem;color:var(--w50);display:flex;align-items:center;padding-right:6px}
+  .rcell{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.035);cursor:pointer;
+    border:1px solid transparent;-webkit-tap-highlight-color:transparent;transition:background .1s,transform .06s}
+  .rcell.beat{background:rgba(255,255,255,.06)}
+  .rcell.on{background:var(--amber);border-color:var(--amber)}
+  .rcell.head{border-color:var(--teal)}
+  .rcell:active{transform:scale(.9)}
   .mel{margin-top:8px}
   .mcell{aspect-ratio:1;border-radius:6px;background:rgba(255,255,255,.04);cursor:pointer;display:grid;place-items:center;
     font-family:var(--font-mono);font-size:.48rem;color:var(--w50);border:1px solid transparent;-webkit-tap-highlight-color:transparent}
@@ -170,7 +196,7 @@
     <div class="headrow">
       <div class="grow">
         <h1>SynthSizer</h1>
-        <p class="lede">Sequencer, keyboard, wave lab and full remote for the hardware synth — over Bluetooth.</p>
+        <p class="lede">A pocket DAW for the hardware synth — channel-rack sequencer, piano roll, pattern slots, wave lab and full remote, over Bluetooth.</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="chip off" id="chip"><span class="dot"></span><span id="status">Offline</span></span>
@@ -180,30 +206,36 @@
     </div>
   </header>
 
-  <section><div class="card">
-    <p class="label">Transport</p>
-    <div class="transport">
+  <div class="tbar">
+    <div class="tbar-inner">
       <button class="tbtn play" id="play" title="Play / Stop">▶</button>
       <button class="tbtn rec" id="rec" title="Record live hits">●</button>
-      <button class="btn ghost" id="clear">Clear</button>
-      <div class="tnum"><span class="k">Tempo <b id="bpmV">110</b></span><input type="range" id="bpm" min="50" max="220" value="110"></div>
+      <div class="pos"><span class="posstep" id="posStep">01</span><span class="posdiv">/</span><span class="poslen" id="posLen">16</span></div>
+      <div class="tnum"><span class="k">BPM <b id="bpmV">110</b></span><input type="range" id="bpm" min="50" max="220" value="110"></div>
       <div class="tnum"><span class="k">Steps <b id="lenV">16</b></span><input type="range" id="len" min="1" max="16" value="16"></div>
       <div class="tnum"><span class="k">Swing <b id="swingV">0</b></span><input type="range" id="swing" min="0" max="70" value="0"></div>
-      <div class="grow" style="flex:1"></div>
+      <div class="grow"></div>
       <div class="modeseg"><button id="mSynth" class="on">Synth</button><button id="mDrums">Drums</button><button id="mWave">Wave</button></div>
+      <div class="meter tbar-meter"><i id="meter"></i></div>
     </div>
-    <div class="meter"><i id="meter"></i></div>
-  </div></section>
+  </div>
 
   <section><div class="card">
-    <p class="label">Pattern<span class="grow"></span>
-      <select id="preset" style="min-width:134px">
+    <p class="label">Channel rack<span class="grow"></span>
+      <span class="slots" id="slots"></span>
+      <select id="preset" style="min-width:126px">
         <option value="">Load preset…</option>
         <option>Four on floor</option><option>Boom bap</option><option>Trap</option><option>Breakbeat</option><option>Random</option>
       </select>
+      <button class="btn ghost" id="clear" style="padding:8px 12px">Clear</button>
     </p>
-    <div class="gridwrap"><div class="steprow" id="steprow"></div><div class="grid" id="grid"></div><div class="mel" id="mel"></div></div>
-    <p class="hint">Tap cells for drums. Tap a melody slot, then a key, to place a note — it auto-advances. Tap a filled slot again to clear.</p>
+    <div class="gridwrap">
+      <div class="steprow" id="steprow"></div>
+      <div class="grid" id="grid"></div>
+      <div class="rollhead">Piano roll</div>
+      <div class="roll" id="roll"></div>
+    </div>
+    <p class="hint">Tap cells to program drums. In the piano roll, tap a cell to set that step's melody note (one per step; tap again to clear). Patterns <b>A–D</b> are saved on this device.</p>
   </div></section>
 
   <section><div class="card">
@@ -292,7 +324,7 @@
     </p>
   </div>
 
-  <footer>omarkhamisbarakat.me · build v4</footer>
+  <footer>omarkhamisbarakat.me · build v5</footer>
 </div>
 
 <script>
@@ -354,21 +386,51 @@ function buildGrid(){
   DRUMS.forEach((name,t)=>{const l=document.createElement('div');l.className='rlabel';l.textContent=name;g.appendChild(l);
     for(let s=0;s<16;s++){const c=document.createElement('div');c.className='cell'+(Math.floor(s/4)%2?' beat':'');c.dataset.t=t;c.dataset.s=s;
       c.addEventListener('pointerdown',e=>{e.preventDefault();toggleCell(t,s);});g.appendChild(c);}});
-  const m=$('mel');m.innerHTML='<div class="rlabel">Melody</div>';
-  for(let s=0;s<16;s++){const c=document.createElement('div');c.className='mcell';c.dataset.s=s;
-    c.addEventListener('pointerdown',e=>{e.preventDefault();pickMel(s);});m.appendChild(c);}
+  buildRoll();
+}
+function buildRoll(){
+  const el=$('roll');el.innerHTML='';
+  for(let r=0;r<16;r++){const key=15-r;                    // high notes on top
+    const l=document.createElement('div');l.className='rlab';l.textContent=noteLabel(key).name;el.appendChild(l);
+    for(let s=0;s<16;s++){const c=document.createElement('div');c.className='rcell'+(Math.floor(s/4)%2?' beat':'');
+      c.dataset.k=key;c.dataset.s=s;
+      c.addEventListener('pointerdown',e=>{e.preventDefault();rollTap(key,s);});el.appendChild(c);}
+  }
   paint();
 }
-function toggleCell(t,s){pat.drum[t]^=(1<<s);send(P.SEQTOGGLE,(t<<8)|s);paint();}
-function pickMel(s){if(selMel===s&&pat.mel[s]!==255){pat.mel[s]=255;send(P.SEQMEL,(s<<8)|255);selMel=-1;}else selMel=s;paint();}
-function setMel(note){if(selMel<0)return false;pat.mel[selMel]=note;send(P.SEQMEL,(selMel<<8)|note);selMel=(selMel+1)%seqLen;paint();return true;}
+function toggleCell(t,s){pat.drum[t]^=(1<<s);send(P.SEQTOGGLE,(t<<8)|s);saveActiveSlot();paint();}
+function rollTap(key,s){                                    // monophonic: one note per step
+  if(pat.mel[s]===key){pat.mel[s]=255;send(P.SEQMEL,(s<<8)|255);}
+  else{pat.mel[s]=key;send(P.SEQMEL,(s<<8)|key);}
+  saveActiveSlot();paint();
+}
 function paint(){
   document.querySelectorAll('#grid .cell').forEach(c=>{const t=+c.dataset.t,s=+c.dataset.s;
     c.classList.toggle('on',!!(pat.drum[t]&(1<<s)));c.classList.toggle('head',seqPlaying&&s===playhead);c.style.opacity=s<seqLen?1:.28;});
   document.querySelectorAll('#steprow .stepnum').forEach(d=>d.classList.toggle('head',seqPlaying&&+d.dataset.s===playhead));
-  document.querySelectorAll('#mel .mcell').forEach(c=>{const s=+c.dataset.s,n=pat.mel[s];
-    c.classList.toggle('set',n!==255);c.classList.toggle('sel',selMel===s);c.classList.toggle('head',seqPlaying&&s===playhead);
-    c.textContent=n===255?'':noteLabel(n).name;c.style.opacity=s<seqLen?1:.28;});
+  document.querySelectorAll('#roll .rcell').forEach(c=>{const k=+c.dataset.k,s=+c.dataset.s;
+    c.classList.toggle('on',pat.mel[s]===k);c.classList.toggle('head',seqPlaying&&s===playhead);c.style.opacity=s<seqLen?1:.28;});
+  const ps=$('posStep');if(ps)ps.textContent=String((playhead||0)+1).padStart(2,'0');
+  const pl=$('posLen');if(pl)pl.textContent=seqLen;
+}
+
+/* pattern slots A–D, saved on this device (FL-style pattern memory) */
+let patternSlots=[null,null,null,null],activeSlot=0;
+try{const s=JSON.parse(localStorage.getItem('synthPatterns'));if(Array.isArray(s)&&s.length===4)patternSlots=s;}catch(e){}
+function saveActiveSlot(){
+  patternSlots[activeSlot]={drum:pat.drum.slice(),mel:pat.mel.slice()};
+  try{localStorage.setItem('synthPatterns',JSON.stringify(patternSlots));}catch(e){}
+}
+function renderSlots(){
+  const host=$('slots');if(!host)return;host.innerHTML='';
+  ['A','B','C','D'].forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;
+    b.classList.toggle('on',i===activeSlot);b.onclick=()=>loadSlot(i);host.appendChild(b);});
+}
+function loadSlot(i){
+  saveActiveSlot();activeSlot=i;
+  const s=patternSlots[i]||{drum:new Array(16).fill(0),mel:new Array(16).fill(255)};
+  pat.drum=s.drum.slice();pat.mel=s.mel.slice();
+  renderSlots();sendPattern();paint();
 }
 
 /* keys */
@@ -376,7 +438,7 @@ function buildKeys(){
   const k=$('keys');k.innerHTML='';$('kbMode').textContent=drums?'Drum pads':'Notes';
   for(let i=0;i<16;i++){const b=document.createElement('div');const info=drums?{name:DRUMS[i],black:false}:noteLabel(i);
     b.className='key'+(info.black?' blk':'');b.innerHTML=`<span class="lbl">${info.name}</span><span class="idx">${i+1}</span>`;
-    const down=e=>{e.preventDefault();b.classList.add('hit');if(drums)send(P.DRUM,i);else if(!setMel(i))send(P.NOTE,i);};
+    const down=e=>{e.preventDefault();b.classList.add('hit');if(drums)send(P.DRUM,i);else send(P.NOTE,i);};
     const up=()=>{b.classList.remove('hit');if(!drums)send(P.NOTEOFF,0);};
     b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);
     b.addEventListener('pointerleave',up);b.addEventListener('pointercancel',up);k.appendChild(b);}
@@ -489,7 +551,7 @@ drawScope();
 /* transport */
 $('play').onclick=()=>{seqPlaying=!seqPlaying;$('play').classList.toggle('on',seqPlaying);send(P.SEQPLAY,seqPlaying?1:0);paint();};
 $('rec').onclick=()=>{seqRec=!seqRec;$('rec').classList.toggle('on',seqRec);send(P.SEQREC,seqRec?1:0);};
-$('clear').onclick=()=>{pat.drum.fill(0);pat.mel.fill(255);send(P.SEQCLEAR,0);paint();};
+$('clear').onclick=()=>{pat.drum.fill(0);pat.mel.fill(255);send(P.SEQCLEAR,0);saveActiveSlot();paint();};
 $('bpm').oninput=e=>{$('bpmV').textContent=e.target.value;send(P.TEMPO,+e.target.value)};
 $('len').oninput=e=>{seqLen=+e.target.value;$('lenV').textContent=seqLen;send(P.SEQLEN,seqLen);paint()};
 $('swing').oninput=e=>{$('swingV').textContent=e.target.value;send(P.SWING,+e.target.value)};
@@ -504,7 +566,7 @@ $('preset').onchange=async e=>{const name=e.target.value;e.target.value='';if(!n
   if(name==='Random'){[0,1,2,3,7,9].forEach(t=>{for(let s=0;s<16;s++)if(Math.random()<(t===2?.4:.18))pat.drum[t]|=(1<<s);});
     for(let s=0;s<16;s+=2)if(Math.random()<.5)pat.mel[s]=Math.floor(Math.random()*8);}
   else{const p=PRESETS[name];for(const t in p)p[t].forEach(s=>pat.drum[t]|=(1<<s));}
-  await sendPattern();paint();};
+  saveActiveSlot();await sendPattern();paint();};
 async function sendPattern(){if(!pattCh)return;const b=new Uint8Array(48);
   for(let t=0;t<16;t++){b[t*2]=pat.drum[t]&255;b[t*2+1]=(pat.drum[t]>>8)&255;}
   for(let s=0;s<16;s++)b[32+s]=pat.mel[s];try{await pattCh.writeValueWithoutResponse(b);}catch(e){}}
@@ -588,7 +650,8 @@ function readState(dv){
     paint();
   }catch(e){}
 }
-buildGrid();buildKeys();buildKnobs();renderBank();
+if(patternSlots[0]){pat.drum=patternSlots[0].drum.slice();pat.mel=patternSlots[0].mel.slice();}
+renderSlots();buildGrid();buildKeys();buildKnobs();renderBank();
 </script>
 </body>
 </html>
