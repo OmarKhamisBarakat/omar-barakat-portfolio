@@ -200,8 +200,9 @@
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="chip off" id="chip"><span class="dot"></span><span id="status">Offline</span></span>
-        <button class="btn" id="connect">Connect</button>
+        <button class="btn" id="connect" title="iPhone: open this page in the Bluefy app">Connect</button>
         <button class="btn ghost" id="scanAll">Scan all</button>
+        <div class="hint" style="flex-basis:100%;margin-top:2px">Chrome/Edge on desktop · iPhone needs the Bluefy app</div>
       </div>
     </div>
   </header>
@@ -263,7 +264,6 @@
     <button class="tab" data-p="drums">Drums</button>
     <button class="tab" data-p="wave">Wave Lab</button>
     <button class="tab" data-p="fx">Effects</button>
-    <button class="tab" data-p="help">Connect</button>
   </div>
 
   <div class="card panel active" id="p-synth">
@@ -277,6 +277,9 @@
     <div class="row"><label>Arp division</label><select id="arpdiv"></select></div>
     <div class="row"><label>Chord shape</label><select id="chord"></select></div>
     <div class="row"><label>Hold</label><button class="toggle" id="hold"></button></div>
+    <div class="row"><label>Glide</label><input type="range" id="glide" min="0" max="600" value="0"><span class="val" id="glideV">0ms</span></div>
+    <div class="row"><label>Sub oscillator</label><input type="range" id="sub" min="0" max="1000" value="0"><span class="val" id="subV">0%</span></div>
+    <div class="row"><label>Transpose</label><input type="range" id="transp" min="0" max="48" value="24"><span class="val" id="transpV">0 st</span></div>
   </div>
 
   <div class="card panel" id="p-drums">
@@ -287,6 +290,9 @@
     <div class="row"><label>Punch</label><input type="range" id="dpunch" min="0" max="1000" value="500"><span class="val" id="dpunchV">50%</span></div>
     <div class="row"><label>Tone</label><input type="range" id="dnoise" min="0" max="1000" value="620"><span class="val" id="dnoiseV">62%</span></div>
     <div class="row"><label>Level</label><input type="range" id="dlevel" min="0" max="1000" value="620"><span class="val" id="dlevelV">62%</span></div>
+    <div class="row"><label>Drive</label><input type="range" id="ddrive" min="0" max="1000" value="0"><span class="val" id="ddriveV">0%</span></div>
+    <div class="row"><label>Compression</label><input type="range" id="dcomp" min="0" max="1000" value="0"><span class="val" id="dcompV">0%</span></div>
+    <div class="row"><label>Humanize</label><input type="range" id="dhuman" min="0" max="1000" value="0"><span class="val" id="dhumanV">0%</span></div>
   </div>
 
   <div class="card panel" id="p-wave">
@@ -302,6 +308,9 @@
     <div class="row"><label>FM index</label><input type="range" id="wvFmI" min="0" max="1000" value="0"><span class="val" id="wvFmIV">0%</span></div>
     <div class="row"><label>FM ratio</label><input type="range" id="wvFmR" min="1" max="16" value="2"><span class="val" id="wvFmRV">×2</span></div>
     <div class="row"><label>Noise</label><input type="range" id="wvNoise" min="0" max="600" value="0"><span class="val" id="wvNoiseV">0%</span></div>
+    <div class="row"><label>4th harmonic</label><input type="range" id="wvH4" min="0" max="1000" value="0"><span class="val" id="wvH4V">0%</span></div>
+    <div class="row"><label>Wavefold</label><input type="range" id="wvFold" min="0" max="1000" value="0"><span class="val" id="wvFoldV">0%</span></div>
+    <div class="row"><label>Ring mod</label><input type="range" id="wvRing" min="0" max="1000" value="0"><span class="val" id="wvRingV">0%</span></div>
     <p class="hint">Switch to <b>Wave</b> mode (top right) to play this signal from the keys, or pick the <b>WaveLab</b> patch in Synth mode.</p>
   </div>
 
@@ -312,10 +321,12 @@
     <div class="row"><label>Feedback</label><input type="range" id="dfbk" min="0" max="1000" value="440"><span class="val" id="dfbkV">44%</span></div>
     <div class="row"><label>Bitcrush</label><input type="range" id="crush" min="0" max="1000" value="0"><span class="val" id="crushV">0%</span></div>
     <div class="row"><label>Metronome</label><button class="toggle" id="metro"></button></div>
+    <div class="row"><label>Overdrive</label><input type="range" id="odrive" min="0" max="1000" value="0"><span class="val" id="odriveV">0%</span></div>
+    <div class="row"><label>Tremolo depth</label><input type="range" id="tremD" min="0" max="1000" value="0"><span class="val" id="tremDV">0%</span></div>
+    <div class="row"><label>Tremolo rate</label><input type="range" id="tremR" min="1" max="16" value="5"><span class="val" id="tremRV">×5</span></div>
   </div>
 
-  <div class="card panel" id="p-help">
-    <p class="label">Connecting</p>
+  <div class="card panel" id="p-help-removed" hidden>
     <p class="note">
       Web Bluetooth over HTTPS.<br>
       <b>Windows / Android</b> — Chrome or Edge.<br>
@@ -324,7 +335,7 @@
     </p>
   </div>
 
-  <footer>omarkhamisbarakat.me · build v5</footer>
+  <footer>omarkhamisbarakat.me · build v6</footer>
 </div>
 
 <script>
@@ -341,7 +352,9 @@ const P={MODE:0,PATCH:1,SCALE:2,ROOT:3,OCT:4,BEND:5,ARP:6,ARPDIV:7,CHORD:8,
   HOLD:21,NOTE:22,DRUM:23,NOTEOFF:24,
   SEQPLAY:25,SEQREC:26,SEQLEN:27,SEQCLEAR:28,SEQTOGGLE:29,SEQMEL:30,
   SWING:31,POTOVR:32,POTVAL:33,
-  WVBASE:34,WVDUTY:35,WVH2:36,WVH3:37,WVH5:38,WVAMD:39,WVAMR:40,WVFMI:41,WVFMR:42,WVNOISE:43,WVRESET:44};
+  WVBASE:34,WVDUTY:35,WVH2:36,WVH3:37,WVH5:38,WVAMD:39,WVAMR:40,WVFMI:41,WVFMR:42,WVNOISE:43,WVRESET:44,
+  GLIDE:45,SUB:46,TRANSPOSE:47,DDRIVE:48,DHUMAN:49,DCOMP:50,
+  WVH4:51,WVFOLD:52,WVRING:53,ODRIVE:54,TREMD:55,TREMR:56};
 
 const PATCHES=['Organ','Flute','Guitar','EPiano','Bell','Brass','Bass','Strings','Reed','Pluck','WaveLab','Marimba','Choir','SubBass','Harp','Siren'];
 const SCALEDEF=[{n:'Chromatic',len:12,st:[0,1,2,3,4,5,6,7,8,9,10,11]},{n:'Major',len:7,st:[0,2,4,5,7,9,11]},
@@ -591,6 +604,22 @@ bindRange('wvDuty',P.WVDUTY,r=>Math.round(r/10)+'%');
 bindRange('wvH2',P.WVH2,r=>Math.round(r/10)+'%');bindRange('wvH3',P.WVH3,r=>Math.round(r/10)+'%');bindRange('wvH5',P.WVH5,r=>Math.round(r/10)+'%');
 bindRange('wvAmD',P.WVAMD,r=>Math.round(r/10)+'%');bindRange('wvAmR',P.WVAMR,r=>'×'+r);
 bindRange('wvFmI',P.WVFMI,r=>Math.round(r/10)+'%');bindRange('wvFmR',P.WVFMR,r=>'×'+r);bindRange('wvNoise',P.WVNOISE,r=>Math.round(r/10)+'%');
+// new synth
+bindRange('glide',P.GLIDE,r=>r+'ms');
+bindRange('sub',P.SUB,r=>Math.round(r/10)+'%');
+bindRange('transp',P.TRANSPOSE,r=>((r-24)>=0?'+':'')+(r-24)+' st');
+// new drums
+bindRange('ddrive',P.DDRIVE,r=>Math.round(r/10)+'%');
+bindRange('dcomp',P.DCOMP,r=>Math.round(r/10)+'%');
+bindRange('dhuman',P.DHUMAN,r=>Math.round(r/10)+'%');
+// new wave lab
+bindRange('wvH4',P.WVH4,r=>Math.round(r/10)+'%');
+bindRange('wvFold',P.WVFOLD,r=>Math.round(r/10)+'%');
+bindRange('wvRing',P.WVRING,r=>Math.round(r/10)+'%');
+// new effects
+bindRange('odrive',P.ODRIVE,r=>Math.round(r/10)+'%');
+bindRange('tremD',P.TREMD,r=>Math.round(r/10)+'%');
+bindRange('tremR',P.TREMR,r=>'×'+r);
 $('wvReset').onclick=()=>send(P.WVRESET,0);
 function bindToggle(el,id){const b=$(el);b.onclick=()=>{b.classList.toggle('on');send(id,b.classList.contains('on')?1:0)}}
 bindToggle('hold',P.HOLD);bindToggle('delay',P.DELAY);bindToggle('metro',P.METRO);
