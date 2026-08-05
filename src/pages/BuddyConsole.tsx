@@ -155,9 +155,13 @@ export default function BuddyConsole() {
           return;
         }
         const slice = buf.subarray(off, Math.min(off + CHUNK, buf.length));
-        // Write-without-response is what makes this bearable; with response it
-        // is roughly an order of magnitude slower.
-        await dataRef.current.writeValueWithoutResponse(slice);
+        // MUST be with-response. writeValueWithoutResponse has no backpressure:
+        // the browser queues locally and resolves instantly, so the page reports
+        // ~300 KB/s onto a link that carries ~5 and the device silently receives
+        // a fraction of the image. Measured: 912KB "sent" in 2.9s, 4% arrived.
+        // With response, each chunk is acknowledged and paced by the connection
+        // interval - about 5.5 KB/s, so ~3 minutes for a full image.
+        await dataRef.current.writeValueWithResponse(slice);
         setSentPct(Math.round(((off + slice.length) / buf.length) * 100));
       }
 
@@ -260,7 +264,9 @@ export default function BuddyConsole() {
                 <div className="h-full rounded-full transition-[width] duration-200"
                      style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${PINK}, ${AMBER})` }} />
               </div>
-              <p className="text-xs text-white/40 mt-2">{pct}% — do not close this tab</p>
+              <p className="text-xs text-white/40 mt-2">
+                {pct}% — about 3 minutes for a full image. Do not close this tab.
+              </p>
             </div>
           )}
 
