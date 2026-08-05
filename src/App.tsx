@@ -8,6 +8,7 @@ import DeskBuddy from "./pages/DeskBuddy";
 import Experience from "./pages/Experience";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import BuddyConsole from "./pages/BuddyConsole";
 
 /** Jump to the top whenever the route changes (SPA nav keeps scroll otherwise). */
 function ScrollToTop() {
@@ -45,6 +46,9 @@ function App() {
               <Route path="/experience" element={<Experience />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
+              {/* Unlisted: BLE console for the desk buddy. Deliberately absent
+                  from the navbar and noindex'd by the page itself. */}
+              <Route path="/workshop/buddy" element={<BuddyConsole />} />
             </Routes>
           </main>
           <Footer />
