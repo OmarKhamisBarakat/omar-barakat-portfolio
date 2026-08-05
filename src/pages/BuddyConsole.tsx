@@ -24,7 +24,26 @@ const CHR_STATE = "b0dd1003-5ca7-4a11-9e5e-1d0e5cb0dd10";
 const TOKEN = "buddy-42"; // must match BLE_LINK_TOKEN in src/config.h (8 bytes)
 
 const OP_AUTH = 0x01, OP_OTA_BEGIN = 0x10, OP_OTA_END = 0x11,
-      OP_OTA_ABORT = 0x12, OP_SET_TIME = 0x20, OP_SET_ALARM = 0x21;
+      OP_OTA_ABORT = 0x12, OP_SET_TIME = 0x20, OP_SET_ALARM = 0x21,
+      OP_EVENT = 0x22, OP_WEATHER = 0x23, OP_SET_TZ = 0x24,
+      OP_SET_BLANK = 0x25, OP_CHIME = 0x26;
+
+/* Event ids from the firmware's Event enum (src/input.h) - order matters. */
+const CITIES = [
+  { id: 1, name: "Cairo",     lat: 30.06, lon: 31.25 },
+  { id: 2, name: "Miami",     lat: 25.76, lon: -80.19 },
+  { id: 3, name: "Paris",     lat: 48.85, lon: 2.35 },
+  { id: 4, name: "Barcelona", lat: 41.39, lon: 2.17 },
+  { id: 5, name: "Tokyo",     lat: 35.68, lon: 139.69 },
+  { id: 6, name: "New York",  lat: 40.71, lon: -74.01 },
+];
+const MODES = [
+  { id: 7, name: "Clock" }, { id: 8, name: "Focus" }, { id: 9, name: "Music" },
+];
+const POKES = [
+  { id: 10, name: "Boop" }, { id: 11, name: "Pet" },
+  { id: 16, name: "Camel" }, { id: 17, name: "Meteor" },
+];
 
 const ST_NAMES = ["idle", "ready", "updating", "rebooting", "error"];
 const ERR_NAMES = ["", "wrong token", "could not start update",
@@ -37,6 +56,16 @@ const CHUNK = 512;
 type Status = {
   state: number; pct: number; err: number;
   epoch: number; alarmH: number; alarmM: number; armed: boolean;
+  /* Appended in a later firmware revision - undefined when talking to an
+     older buddy, so every reader must cope with them being missing. */
+  city?: number; tz?: number; blank?: number;
+  uptime?: number; heap?: number; wxMask?: number;
+};
+
+const uptimeStr = (s: number) => {
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m ${s % 60}s`;
 };
 
 export default function BuddyConsole() {
@@ -48,6 +77,7 @@ export default function BuddyConsole() {
   const [busy, setBusy] = useState(false);
   const [sentPct, setSentPct] = useState(0);
   const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [alarmH, setAlarmH] = useState(7);
   const [alarmM, setAlarmM] = useState(0);
   const [armed, setArmed] = useState(false);
@@ -63,7 +93,7 @@ export default function BuddyConsole() {
 
   useEffect(() => {
     setSupported(typeof navigator !== "undefined" && !!(navigator as any).bluetooth);
-    document.title = "buddy console";
+    document.title = "Desk Buddy Console";
     // Keep an unlisted page out of search results.
     const m = document.createElement("meta");
     m.name = "robots";
@@ -75,11 +105,21 @@ export default function BuddyConsole() {
   const onStatus = useCallback((e: any) => {
     const v: DataView = e.target.value;
     if (v.byteLength < 10) return;
-    setStatus({
+    const s: Status = {
       state: v.getUint8(0), pct: v.getUint8(1), err: v.getUint8(2),
       epoch: v.getUint32(3, true),
       alarmH: v.getUint8(7), alarmM: v.getUint8(8), armed: v.getUint8(9) !== 0,
-    });
+    };
+    // Telemetry block is append-only; only read it if the buddy actually sent it.
+    if (v.byteLength >= 22) {
+      s.city = v.getUint8(10);
+      s.tz = v.getInt8(11);
+      s.blank = v.getUint8(12);
+      s.uptime = v.getUint32(13, true);
+      s.heap = v.getUint32(17, true);
+      s.wxMask = v.getUint8(21);
+    }
+    setStatus(s);
   }, []);
 
   const connect = useCallback(async () => {
@@ -191,6 +231,61 @@ export default function BuddyConsole() {
     say(`alarm ${armed ? "on" : "off"} at ${pad(alarmH)}:${pad(alarmM)}`);
   }, [ctrl, alarmH, alarmM, armed, say]);
 
+  /* Tap a card from anywhere. Goes through the firmware's onCard(), so the
+     plane actually flies and the cat actually reacts. */
+  const sendEvent = useCallback(async (id: number, name: string) => {
+    await ctrl(new Uint8Array([OP_EVENT, id]));
+    say(`sent ${name}`);
+  }, [ctrl, say]);
+
+  const chime = useCallback(async (tune: number) => {
+    await ctrl(new Uint8Array([OP_CHIME, tune]));
+    say(tune === 0 ? "chirped" : "played a flourish");
+  }, [ctrl, say]);
+
+  /* Weather without the USB cable: fetch all six cities and push them over BLE
+     into the same store the USB tool writes, so the scene cannot tell them
+     apart. This is what lets live weather work on a plain charger. */
+  const syncWeather = useCallback(async () => {
+    setBusy(true);
+    say("fetching weather for six cities…");
+    let ok = 0;
+    for (let i = 0; i < CITIES.length; i++) {
+      const c = CITIES[i];
+      try {
+        const r = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}` +
+          `&longitude=${c.lon}&current=temperature_2m,weather_code`);
+        const cur = (await r.json()).current;
+        const t = Math.max(-128, Math.min(127, Math.round(cur.temperature_2m)));
+        const b = new Uint8Array(4);
+        b[0] = OP_WEATHER; b[1] = i;
+        new DataView(b.buffer).setInt8(2, t);
+        b[3] = cur.weather_code & 0xff;
+        await ctrl(b);
+        ok++;
+        say(`  ${c.name}: ${t}°C (code ${cur.weather_code})`);
+      } catch {
+        say(`  ${c.name}: fetch failed`);
+      }
+    }
+    say(`weather synced for ${ok}/${CITIES.length} cities`);
+    setBusy(false);
+  }, [ctrl, say]);
+
+  const sendTz = useCallback(async (hours: number) => {
+    const b = new Uint8Array(2);
+    b[0] = OP_SET_TZ;
+    new DataView(b.buffer).setInt8(1, hours);
+    await ctrl(b);
+    say(`her timezone set to UTC${hours >= 0 ? "+" : ""}${hours}`);
+  }, [ctrl, say]);
+
+  const sendBlank = useCallback(async (mins: number) => {
+    await ctrl(new Uint8Array([OP_SET_BLANK, mins]));
+    say(mins === 0 ? "screen never blanks" : `screen blanks after ${mins} min`);
+  }, [ctrl, say]);
+
   // Adopt whatever the buddy reports, so the controls show its truth on connect.
   useEffect(() => {
     if (!status) return;
@@ -249,14 +344,36 @@ export default function BuddyConsole() {
             into it; if the image is bad it falls back, so a failed update is not fatal.
           </p>
 
-          <input
-            type="file" accept=".bin"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-white/60 mb-4
-                       file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
-                       file:text-sm file:font-pixel file:bg-white/10 file:text-white/80
-                       hover:file:bg-white/15 file:cursor-pointer"
-          />
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f?.name.endsWith(".bin")) { setFile(f); say(`picked ${f.name}`); }
+              else say("that is not a .bin");
+            }}
+            className="rounded-lg border border-dashed p-5 mb-4 transition-colors"
+            style={{
+              borderColor: dragging ? PINK : "rgba(255,255,255,0.15)",
+              background: dragging ? `${PINK}0F` : "transparent",
+            }}
+          >
+            <p className="text-sm text-white/50 mb-3">
+              {file
+                ? `${file.name} — ${(file.size / 1024).toFixed(0)} KB`
+                : "Drop firmware.bin here, or pick it:"}
+            </p>
+            <input
+              type="file" accept=".bin"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-white/60
+                         file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
+                         file:text-sm file:font-pixel file:bg-white/10 file:text-white/80
+                         hover:file:bg-white/15 file:cursor-pointer"
+            />
+          </div>
 
           {(busy || pct > 0) && (
             <div className="mb-4">
@@ -278,6 +395,79 @@ export default function BuddyConsole() {
               abort
             </Btn>
           </div>
+        </div>
+      </Reveal>
+
+      {/* telemetry */}
+      {status && status.uptime !== undefined && (
+        <Reveal delay={0.07}>
+          <div style={box(AMBER)} className="p-6 rounded-xl mt-6">
+            <Eyebrow accent={AMBER}>VITALS</Eyebrow>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
+              <Stat label="ON SCREEN" value={CITIES[(status.city ?? 0)]?.name ?? "—"} />
+              <Stat label="UPTIME" value={uptimeStr(status.uptime)} />
+              <Stat label="FREE HEAP"
+                    value={`${((status.heap ?? 0) / 1024).toFixed(0)} KB`}
+                    warn={(status.heap ?? 0) < 40000} />
+              <Stat label="WEATHER"
+                    value={`${countBits(status.wxMask ?? 0)}/6 cities`}
+                    warn={countBits(status.wxMask ?? 0) === 0} />
+            </div>
+          </div>
+        </Reveal>
+      )}
+
+      {/* remote cards */}
+      <Reveal delay={0.08}>
+        <div style={box(TEAL)} className="p-6 rounded-xl mt-6">
+          <Eyebrow accent={TEAL}>TAP A CARD FROM ANYWHERE</Eyebrow>
+          <p className="text-white/50 text-sm mt-3 mb-5 leading-relaxed">
+            These go through the same code path as the real RFID cards, so the
+            plane actually flies and the cat actually reacts. Cards stay the
+            interface — this is just a very long arm.
+          </p>
+
+          <p className="text-[10px] font-pixel text-white/35 mb-2 tracking-widest">DESTINATIONS</p>
+          <div className="flex flex-wrap gap-2 mb-5">
+            {CITIES.map((c, i) => (
+              <Btn key={c.id} onClick={() => sendEvent(c.id, c.name)}
+                   disabled={!connected}
+                   accent={status?.city === i ? AMBER : TEAL}>{c.name}</Btn>
+            ))}
+          </div>
+
+          <p className="text-[10px] font-pixel text-white/35 mb-2 tracking-widest">MODES</p>
+          <div className="flex flex-wrap gap-2 mb-5">
+            {MODES.map((m) => (
+              <Btn key={m.id} onClick={() => sendEvent(m.id, m.name)}
+                   disabled={!connected} accent={PINK}>{m.name}</Btn>
+            ))}
+          </div>
+
+          <p className="text-[10px] font-pixel text-white/35 mb-2 tracking-widest">SAY HELLO</p>
+          <div className="flex flex-wrap gap-2">
+            {POKES.map((p) => (
+              <Btn key={p.id} onClick={() => sendEvent(p.id, p.name)}
+                   disabled={!connected} accent={AMBER}>{p.name}</Btn>
+            ))}
+            <Btn onClick={() => chime(0)} disabled={!connected} accent={AMBER}>chirp</Btn>
+            <Btn onClick={() => chime(1)} disabled={!connected} accent={AMBER}>fanfare</Btn>
+          </div>
+        </div>
+      </Reveal>
+
+      {/* weather */}
+      <Reveal delay={0.09}>
+        <div style={box(PINK)} className="p-6 rounded-xl mt-6">
+          <Eyebrow accent={PINK}>WEATHER</Eyebrow>
+          <p className="text-white/50 text-sm mt-3 mb-5 leading-relaxed">
+            Pulls Open-Meteo for all six cities and pushes it over Bluetooth into
+            the same place the USB tool writes. That means live rain and snow on
+            a plain wall charger, with no laptop on the cable.
+          </p>
+          <Btn onClick={syncWeather} disabled={!connected || busy} accent={PINK}>
+            {busy ? "syncing…" : "sync all six cities"}
+          </Btn>
         </div>
       </Reveal>
 
@@ -310,6 +500,37 @@ export default function BuddyConsole() {
               <Btn onClick={syncClock} disabled={!connected} accent={AMBER}>sync clock</Btn>
             </div>
           </div>
+
+          <div className="border-t border-white/5 mt-6 pt-6 flex flex-wrap items-end gap-5">
+            <div>
+              <label className="block text-xs text-white/40 mb-2 font-pixel">
+                HER TIMEZONE (UTC{(status?.tz ?? 3) >= 0 ? "+" : ""}{status?.tz ?? 3})
+              </label>
+              <div className="flex gap-2">
+                <Btn onClick={() => sendTz((status?.tz ?? 3) - 1)} disabled={!connected} accent={TEAL}>−1h</Btn>
+                <Btn onClick={() => sendTz((status?.tz ?? 3) + 1)} disabled={!connected} accent={TEAL}>+1h</Btn>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-white/40 mb-2 font-pixel">
+                BLANK AFTER {status?.blank === 0 ? "never" : `${status?.blank ?? 10} min`}
+              </label>
+              <div className="flex gap-2">
+                {[0, 5, 10, 30].map((m) => (
+                  <Btn key={m} onClick={() => sendBlank(m)} disabled={!connected}
+                       accent={status?.blank === m ? AMBER : TEAL}>
+                    {m === 0 ? "never" : `${m}m`}
+                  </Btn>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-white/30 text-xs mt-5 leading-relaxed">
+            Timezone matters because the alarm fires on her local clock — this is
+            how you fix it when Egypt's DST flips, without a cable.
+          </p>
         </div>
       </Reveal>
 
@@ -327,6 +548,19 @@ export default function BuddyConsole() {
 
 /* ---- small local pieces (not worth promoting to the shared kit) ---- */
 const pad = (n: number) => String(n).padStart(2, "0");
+const countBits = (n: number) => n.toString(2).split("1").length - 1;
+
+function Stat({ label, value, warn }: {
+  label: string; value: string; warn?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-pixel tracking-widest text-white/35">{label}</p>
+      <p className="font-pixel text-sm mt-1.5"
+         style={{ color: warn ? "#FFB347" : "rgba(255,255,255,0.85)" }}>{value}</p>
+    </div>
+  );
+}
 
 const box = (accent: string) => ({
   background: "rgba(255,255,255,0.03)",
@@ -337,8 +571,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <section className="max-w-3xl mx-auto px-6 py-16 sm:py-24">
       <Reveal className="mb-10">
-        <Eyebrow accent={PINK} className="mb-4">UNLISTED</Eyebrow>
-        <h1 className="font-pixel text-3xl sm:text-4xl text-white/90">buddy console</h1>
+        <h1 className="font-pixel text-3xl sm:text-4xl text-white/90">Desk Buddy Console</h1>
       </Reveal>
       {children}
     </section>
