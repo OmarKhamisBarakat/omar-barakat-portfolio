@@ -18,7 +18,19 @@ const CHR_CTRL = "b0dd1001-5ca7-4a11-9e5e-1d0e5cb0dd10";
 const CHR_STATE = "b0dd1003-5ca7-4a11-9e5e-1d0e5cb0dd10";
 
 const OP_SET_TIME = 0x20, OP_SET_ALARM = 0x21, OP_EVENT = 0x22,
-      OP_WEATHER = 0x23, OP_SET_TZ = 0x24, OP_CHIME = 0x26;
+      OP_WEATHER = 0x23, OP_SET_TZ = 0x24, OP_CHIME = 0x26,
+      OP_ALARM_SND = 0x27;
+
+/* Alarm voices, in the firmware's order (Sound::TUNES in src/sound.h). The
+   descriptions matter more than the names: on a square-wave buzzer the
+   character comes from rhythm, so "two-tone" tells you more than "Klaxon". */
+const VOICES = [
+  { name: "Chirp",   about: "Short and bright. Easy to ignore." },
+  { name: "Sunrise", about: "Rises slowly. Gentlest of the five." },
+  { name: "Klaxon",  about: "Two-tone and urgent. Hard to sleep through." },
+  { name: "Bells",   about: "Wide chiming intervals." },
+  { name: "Travel",  about: "The arrival tune, stretched out." },
+];
 
 /* Airport codes because the cards are boarding passes. Art comes from the
    buddy's own sprite sheets via tools/webexport.py, so the page and the
@@ -50,6 +62,7 @@ export default function BuddyRemote() {
   const [alarmM, setAlarmM] = useState(0);
   const [armed, setArmed] = useState(false);
   const [inFlight, setInFlight] = useState<number | null>(null);
+  const [voice, setVoice] = useState(0);
 
   const ctrlRef = useRef<any>(null);
   const devRef = useRef<any>(null);
@@ -81,6 +94,7 @@ export default function BuddyRemote() {
     setAlarmM(v.getUint8(8));
     setArmed(v.getUint8(9) !== 0);
     if (v.byteLength >= 22) setCity(v.getUint8(10));
+    if (v.byteLength >= 23) setVoice(v.getUint8(22));
   }, []);
 
   const ctrl = useCallback(async (bytes: Uint8Array) => {
@@ -166,6 +180,15 @@ export default function BuddyRemote() {
   const chirp = useCallback(async (tune: number, msg: string) => {
     await ctrl(new Uint8Array([OP_CHIME, tune]));
     setNote(msg);
+  }, [ctrl]);
+
+  /* Picking a voice plays it on the buddy's own buzzer. A browser could
+     synthesise a square wave, but it would tell you nothing about how the
+     piezo across the room actually sounds at 7am. */
+  const pickVoice = useCallback(async (i: number) => {
+    setVoice(i);
+    await ctrl(new Uint8Array([OP_ALARM_SND, i, 1]));
+    setNote(`${VOICES[i].name} — listen to your buddy.`);
   }, [ctrl]);
 
   const saveAlarm = useCallback(async (h: number, m: number, on: boolean) => {
@@ -311,6 +334,35 @@ export default function BuddyRemote() {
               <p className="text-white/35 text-xs flex-1 min-w-[12rem] leading-relaxed">
                 The cat wakes you on your own clock — it already knows your time zone.
               </p>
+            </div>
+
+            {/* Tap to hear it. The buddy plays the sample, not the browser. */}
+            <div className="border-t border-white/5 mt-5 pt-5">
+              <p className="font-pixel text-[10px] tracking-[0.3em] text-white/35 mb-3">
+                SOUND — TAP TO HEAR IT
+              </p>
+              <div className="flex flex-col gap-2">
+                {VOICES.map((v, i) => {
+                  const on = i === voice;
+                  return (
+                    <button
+                      key={v.name}
+                      onClick={() => pickVoice(i)}
+                      className="text-left rounded-lg px-4 py-3 transition-colors"
+                      style={{
+                        background: on ? `${AMBER}14` : "rgba(255,255,255,.04)",
+                        border: `1px solid ${on ? `${AMBER}66` : "rgba(255,255,255,.08)"}`,
+                      }}
+                    >
+                      <span className="font-pixel text-xs"
+                            style={{ color: on ? AMBER : "rgba(255,255,255,.8)" }}>
+                        {v.name}{on ? "  ●" : ""}
+                      </span>
+                      <span className="block text-white/40 text-xs mt-1">{v.about}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </Panel>
         </>
