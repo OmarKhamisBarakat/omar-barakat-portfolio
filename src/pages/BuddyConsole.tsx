@@ -26,7 +26,10 @@ const TOKEN = "buddy-42"; // must match BLE_LINK_TOKEN in src/config.h (8 bytes)
 const OP_AUTH = 0x01, OP_OTA_BEGIN = 0x10, OP_OTA_END = 0x11,
       OP_OTA_ABORT = 0x12, OP_SET_TIME = 0x20, OP_SET_ALARM = 0x21,
       OP_EVENT = 0x22, OP_WEATHER = 0x23, OP_SET_TZ = 0x24,
-      OP_SET_BLANK = 0x25, OP_CHIME = 0x26;
+      OP_SET_BLANK = 0x25, OP_CHIME = 0x26, OP_ALARM_SND = 0x27;
+
+/* Alarm voices, in the firmware's order (Sound::TUNES in src/sound.h). */
+const VOICES = ["Chirp", "Sunrise", "Klaxon", "Bells", "Travel"];
 
 /* Event ids from the firmware's Event enum (src/input.h) - order matters. */
 const CITIES = [
@@ -59,7 +62,7 @@ type Status = {
   /* Appended in a later firmware revision - undefined when talking to an
      older buddy, so every reader must cope with them being missing. */
   city?: number; tz?: number; blank?: number;
-  uptime?: number; heap?: number; wxMask?: number;
+  uptime?: number; heap?: number; wxMask?: number; voice?: number;
 };
 
 const uptimeStr = (s: number) => {
@@ -86,6 +89,9 @@ export default function BuddyConsole() {
   const dataRef = useRef<any>(null);
   const devRef = useRef<any>(null);
   const abortRef = useRef(false);
+  // React state is stale inside the long-lived async upload closure, so the
+  // transfer reads the buddy's status through a ref instead.
+  const statusRef = useRef<Status | null>(null);
 
   const say = useCallback((m: string) => {
     setLog((l) => [`${new Date().toLocaleTimeString()}  ${m}`, ...l].slice(0, 60));
@@ -119,6 +125,8 @@ export default function BuddyConsole() {
       s.heap = v.getUint32(17, true);
       s.wxMask = v.getUint8(21);
     }
+    if (v.byteLength >= 23) s.voice = v.getUint8(22);
+    statusRef.current = s;
     setStatus(s);
   }, []);
 
@@ -201,6 +209,24 @@ export default function BuddyConsole() {
       new DataView(begin.buffer).setUint32(1, buf.length, true);
       await ctrl(begin);
 
+      // Wait for the buddy to report state 2 (updating). Erasing flash stalls
+      // both of its cores, so it does that on its render loop rather than in
+      // the Bluetooth callback - which means "begin" is acknowledged before the
+      // partition is actually ready. Streaming immediately would push the first
+      // chunks into a device that is not listening for them yet.
+      const readyBy = performance.now() + 15000;
+      for (;;) {
+        const st: number | undefined = statusRef.current?.state;
+        if (st === 2) break;
+        if (st === 4) {
+          say(`buddy refused the update: ${ERR_NAMES[statusRef.current!.err] ?? "?"}`);
+          return;
+        }
+        if (performance.now() > readyBy) { say("buddy never became ready"); return; }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      say("buddy is ready, streaming…");
+
       for (let off = 0; off < buf.length; off += CHUNK) {
         if (abortRef.current) {
           await ctrl(new Uint8Array([OP_OTA_ABORT]));
@@ -220,7 +246,20 @@ export default function BuddyConsole() {
 
       await ctrl(new Uint8Array([OP_OTA_END]));
       const secs = (performance.now() - t0) / 1000;
-      say(`sent in ${secs.toFixed(1)}s — buddy is verifying and rebooting`);
+      say(`sent in ${secs.toFixed(1)}s — buddy is writing the last of it`);
+
+      // The buddy still has buffered bytes to commit, so the outcome arrives a
+      // moment later. Report what it actually says rather than assuming.
+      const doneBy = performance.now() + 20000;
+      while (performance.now() < doneBy) {
+        const st: number | undefined = statusRef.current?.state;
+        if (st === 3) { say("verified — rebooting into the new firmware"); break; }
+        if (st === 4) {
+          say(`rejected: ${ERR_NAMES[statusRef.current!.err] ?? "?"}`);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
     } catch (err: any) {
       say(`update failed: ${err?.message ?? err}`);
       try { await ctrl(new Uint8Array([OP_OTA_ABORT])); } catch { /* link gone */ }
@@ -292,6 +331,13 @@ export default function BuddyConsole() {
     new DataView(b.buffer).setInt8(1, hours);
     await ctrl(b);
     say(`home timezone set to UTC${hours >= 0 ? "+" : ""}${hours}`);
+  }, [ctrl, say]);
+
+  /* Selecting a voice previews it on the buddy's own piezo - the only place
+     the choice can actually be judged. */
+  const pickVoice = useCallback(async (i: number) => {
+    await ctrl(new Uint8Array([OP_ALARM_SND, i, 1]));
+    say(`alarm sound: ${VOICES[i]} (playing on the buddy)`);
   }, [ctrl, say]);
 
   const sendBlank = useCallback(async (mins: number) => {
@@ -511,6 +557,18 @@ export default function BuddyConsole() {
             <div className="flex gap-2 ml-auto">
               <Btn onClick={sendAlarm} disabled={!connected} accent={TEAL}>set alarm</Btn>
               <Btn onClick={syncClock} disabled={!connected} accent={AMBER}>sync clock</Btn>
+            </div>
+          </div>
+
+          <div className="border-t border-white/5 mt-6 pt-6">
+            <label className="block text-xs text-white/40 mb-3 font-pixel">
+              ALARM SOUND — TAP TO HEAR IT ON THE BUZZER
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {VOICES.map((v, i) => (
+                <Btn key={v} onClick={() => pickVoice(i)} disabled={!connected}
+                     accent={status?.voice === i ? AMBER : TEAL}>{v}</Btn>
+              ))}
             </div>
           </div>
 
