@@ -31,6 +31,27 @@ const OP_AUTH = 0x01, OP_OTA_BEGIN = 0x10, OP_OTA_END = 0x11,
 /* Alarm voices, in the firmware's order (Sound::TUNES in src/sound.h). */
 const VOICES = ["Chirp", "Sunrise", "Klaxon", "Bells", "Travel"];
 
+/* Every ESP32 image carries an esp_app_desc_t at a fixed offset, holding an
+   app_elf_sha256 that is unique to that build. Reading it out of the .bin means
+   we can say what we are ABOUT to send, and compare it with what the buddy
+   reports after it reboots. That is proof an update took; uptime is a guess.
+
+   Layout: the struct sits at 0x20 (past the 24-byte image header and the
+   8-byte segment header), magic first, sha256 144 bytes into the struct. */
+const DESC_OFF = 0x20;
+const DESC_MAGIC = 0xabcd5432;
+const SHA_OFF = DESC_OFF + 144;
+
+function buildIdOf(buf: Uint8Array): string | null {
+  if (buf.length < SHA_OFF + 8) return null;
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  if (dv.getUint32(DESC_OFF, true) !== DESC_MAGIC) return null;  // not an app image
+  return hex8(buf.subarray(SHA_OFF, SHA_OFF + 8));
+}
+
+const hex8 = (b: Uint8Array) =>
+  Array.from(b).map((n) => n.toString(16).padStart(2, "0")).join("");
+
 /* Event ids from the firmware's Event enum (src/input.h) - order matters. */
 const CITIES = [
   { id: 1, name: "Cairo",     lat: 30.06, lon: 31.25 },
@@ -63,6 +84,7 @@ type Status = {
      older buddy, so every reader must cope with them being missing. */
   city?: number; tz?: number; blank?: number;
   uptime?: number; heap?: number; wxMask?: number; voice?: number;
+  build?: string;   // first 8 bytes of app_elf_sha256, hex
 };
 
 const uptimeStr = (s: number) => {
@@ -80,6 +102,7 @@ export default function BuddyConsole() {
   const [busy, setBusy] = useState(false);
   const [sentPct, setSentPct] = useState(0);
   const [file, setFile] = useState<File | null>(null);
+  const [fileBuild, setFileBuild] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [alarmH, setAlarmH] = useState(7);
   const [alarmM, setAlarmM] = useState(0);
@@ -126,6 +149,9 @@ export default function BuddyConsole() {
       s.wxMask = v.getUint8(21);
     }
     if (v.byteLength >= 23) s.voice = v.getUint8(22);
+    if (v.byteLength >= 33) {
+      s.build = hex8(new Uint8Array(v.buffer, v.byteOffset + 25, 8));
+    }
     statusRef.current = s;
     setStatus(s);
   }, []);
@@ -180,6 +206,22 @@ export default function BuddyConsole() {
     if (!ctrlRef.current) throw new Error("not connected");
     await ctrlRef.current.writeValue(bytes);
   }, []);
+
+  /* Read the build fingerprint as soon as a file is chosen, so you can see
+     whether it differs from what is already running BEFORE spending 3 minutes
+     sending it. */
+  const takeFile = useCallback(async (f: File | null) => {
+    setFile(f);
+    setFileBuild(null);
+    if (!f) return;
+    const id = buildIdOf(new Uint8Array(await f.arrayBuffer()));
+    setFileBuild(id);
+    if (!id) { say(`${f.name}: not an ESP32 app image`); return; }
+    const running = statusRef.current?.build;
+    say(`${f.name}: build ${id}` +
+        (running ? (running === id ? " — same as what is running"
+                                   : ` — differs from running ${running}`) : ""));
+  }, [say]);
 
   /* The buddy has no RTC: it drifts and resumes from flash after an unplug, so
      hold its clock steady for as long as the console is connected. */
@@ -253,7 +295,24 @@ export default function BuddyConsole() {
       const doneBy = performance.now() + 20000;
       while (performance.now() < doneBy) {
         const st: number | undefined = statusRef.current?.state;
-        if (st === 3) { say("verified — rebooting into the new firmware"); break; }
+        if (st === 3) {
+          say("verified — rebooting into the new firmware");
+          // Proof, not inference: reconnect and compare the build fingerprint
+          // the buddy reports against the one we just sent.
+          if (fileBuild) {
+            say(`waiting for it to come back and report build ${fileBuild}…`);
+            const upBy = performance.now() + 40000;
+            while (performance.now() < upBy) {
+              await new Promise((r) => setTimeout(r, 2000));
+              const now = statusRef.current?.build;
+              if (now && now === fileBuild) {
+                say(`CONFIRMED — buddy is running ${now}`);
+                break;
+              }
+            }
+          }
+          break;
+        }
         if (st === 4) {
           say(`rejected: ${ERR_NAMES[statusRef.current!.err] ?? "?"}`);
           break;
@@ -410,7 +469,7 @@ export default function BuddyConsole() {
               e.preventDefault();
               setDragging(false);
               const f = e.dataTransfer.files?.[0];
-              if (f?.name.endsWith(".bin")) { setFile(f); say(`picked ${f.name}`); }
+              if (f?.name.endsWith(".bin")) takeFile(f);
               else say("that is not a .bin");
             }}
             className="rounded-lg border border-dashed p-5 mb-4 transition-colors"
@@ -424,9 +483,19 @@ export default function BuddyConsole() {
                 ? `${file.name} — ${(file.size / 1024).toFixed(0)} KB`
                 : "Drop firmware.bin here, or pick it:"}
             </p>
+            {file && (
+              <p className="text-xs mb-3 font-pixel"
+                 style={{ color: !fileBuild ? "#FFB347"
+                        : fileBuild === status?.build ? "rgba(255,255,255,.35)" : TEAL }}>
+                {!fileBuild ? "not an ESP32 app image"
+                  : fileBuild === status?.build
+                    ? `build ${fileBuild} — identical to what is running`
+                    : `build ${fileBuild} → replaces ${status?.build ?? "unknown"}`}
+              </p>
+            )}
             <input
               type="file" accept=".bin"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => takeFile(e.target.files?.[0] ?? null)}
               className="block w-full text-sm text-white/60
                          file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
                          file:text-sm file:font-pixel file:bg-white/10 file:text-white/80
@@ -468,9 +537,7 @@ export default function BuddyConsole() {
               <Stat label="FREE HEAP"
                     value={`${((status.heap ?? 0) / 1024).toFixed(0)} KB`}
                     warn={(status.heap ?? 0) < 40000} />
-              <Stat label="WEATHER"
-                    value={`${countBits(status.wxMask ?? 0)}/6 cities`}
-                    warn={countBits(status.wxMask ?? 0) === 0} />
+              <Stat label="RUNNING BUILD" value={status.build ?? "—"} />
             </div>
           </div>
         </Reveal>
