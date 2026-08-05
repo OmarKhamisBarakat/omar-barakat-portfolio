@@ -173,6 +173,19 @@ export default function BuddyConsole() {
     await ctrlRef.current.writeValue(bytes);
   }, []);
 
+  /* The buddy has no RTC: it drifts and resumes from flash after an unplug, so
+     hold its clock steady for as long as the console is connected. */
+  useEffect(() => {
+    if (!connected) return;
+    const id = setInterval(() => {
+      const b = new Uint8Array(5);
+      b[0] = OP_SET_TIME;
+      new DataView(b.buffer).setUint32(1, Math.floor(Date.now() / 1000), true);
+      ctrl(b).catch(() => { /* link gone; the disconnect handler reports it */ });
+    }, 300000);
+    return () => clearInterval(id);
+  }, [connected, ctrl]);
+
   /* ---- firmware update ---- */
   const flash = useCallback(async () => {
     if (!file) return;

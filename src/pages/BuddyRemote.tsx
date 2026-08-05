@@ -166,6 +166,20 @@ export default function BuddyRemote() {
     }
   }, [onStatus, catchUp]);
 
+  /* Keep the clock right for as long as this page is open. The buddy has no
+     RTC, so it drifts about a second a day and resumes from flash after an
+     unplug - both of which a five-minute nudge quietly erases. */
+  useEffect(() => {
+    if (!connected) return;
+    const id = setInterval(() => {
+      const b = new Uint8Array(5);
+      b[0] = OP_SET_TIME;
+      new DataView(b.buffer).setUint32(1, Math.floor(Date.now() / 1000), true);
+      ctrl(b).catch(() => { /* link dropped; the disconnect handler says so */ });
+    }, 300000);
+    return () => clearInterval(id);
+  }, [connected, ctrl]);
+
   const fly = useCallback(async (i: number) => {
     setInFlight(i);
     await ctrl(new Uint8Array([OP_EVENT, BOARD[i].id]));
