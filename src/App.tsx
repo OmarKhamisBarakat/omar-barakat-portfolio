@@ -9,6 +9,7 @@ import Experience from "./pages/Experience";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import BuddyConsole from "./pages/BuddyConsole";
+import BuddyRemote from "./pages/BuddyRemote";
 
 /** Jump to the top whenever the route changes (SPA nav keeps scroll otherwise). */
 function ScrollToTop() {
@@ -46,8 +47,11 @@ function App() {
               <Route path="/experience" element={<Experience />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
-              {/* Unlisted: BLE console for the desk buddy. Deliberately absent
-                  from the navbar and noindex'd by the page itself. */}
+              {/* Unlisted BLE pages for the desk buddy, both off the navbar and
+                  noindex'd by the pages themselves. /buddy is the one that gets
+                  handed to the person who owns the cat; /workshop/buddy is the
+                  technical console with firmware updates on it. */}
+              <Route path="/buddy" element={<BuddyRemote />} />
               <Route path="/workshop/buddy" element={<BuddyConsole />} />
             </Routes>
           </main>

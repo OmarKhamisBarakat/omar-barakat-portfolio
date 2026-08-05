@@ -1,7 +1,7 @@
 /* Unlisted console for the Pixel Travel Buddy.
  *
  * Two jobs: push firmware to the buddy over BLE (mine), and let whoever has it
- * set the clock and alarm without a cable (hers). Talks to the GATT service in
+ * set the clock and alarm without a cable. Talks to the GATT service in
  * the firmware's src/ble_link.h.
  *
  * NOT SECRET, just unlisted. The portfolio repo is public, so this path and the
@@ -278,7 +278,7 @@ export default function BuddyConsole() {
     b[0] = OP_SET_TZ;
     new DataView(b.buffer).setInt8(1, hours);
     await ctrl(b);
-    say(`her timezone set to UTC${hours >= 0 ? "+" : ""}${hours}`);
+    say(`home timezone set to UTC${hours >= 0 ? "+" : ""}${hours}`);
   }, [ctrl, say]);
 
   const sendBlank = useCallback(async (mins: number) => {
@@ -476,7 +476,7 @@ export default function BuddyConsole() {
         <div style={box(TEAL)} className="p-6 rounded-xl mt-6">
           <Eyebrow accent={TEAL}>SETTINGS</Eyebrow>
           <p className="text-white/50 text-sm mt-3 mb-5 leading-relaxed">
-            No token needed for these — they are hers to change.
+            No token needed for these.
           </p>
 
           <div className="flex flex-wrap items-end gap-5">
@@ -504,7 +504,7 @@ export default function BuddyConsole() {
           <div className="border-t border-white/5 mt-6 pt-6 flex flex-wrap items-end gap-5">
             <div>
               <label className="block text-xs text-white/40 mb-2 font-pixel">
-                HER TIMEZONE (UTC{(status?.tz ?? 3) >= 0 ? "+" : ""}{status?.tz ?? 3})
+                HOME TIMEZONE (UTC{(status?.tz ?? 3) >= 0 ? "+" : ""}{status?.tz ?? 3})
               </label>
               <div className="flex gap-2">
                 <Btn onClick={() => sendTz((status?.tz ?? 3) - 1)} disabled={!connected} accent={TEAL}>−1h</Btn>
@@ -528,7 +528,7 @@ export default function BuddyConsole() {
           </div>
 
           <p className="text-white/30 text-xs mt-5 leading-relaxed">
-            Timezone matters because the alarm fires on her local clock — this is
+            Timezone matters because the alarm fires on the buddy's home clock — this is
             how you fix it when Egypt's DST flips, without a cable.
           </p>
         </div>
