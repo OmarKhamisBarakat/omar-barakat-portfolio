@@ -22,11 +22,6 @@ export interface ParsedWorld {
   zip: JSZip;
   logFileName: string;
   logData: Uint8Array;
-  nbtOffset: number;
-  nbtLength: number;
-  valLenOffset: number;
-  valLenByteCount: number;
-  recordHeaderOffset: number;
   inventory: InventoryState;
   rawRootNbt: any;
 }
@@ -47,6 +42,38 @@ const TAG = {
   LongArray: 12
 };
 
+const CRC32C_TABLE = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+  let c = i;
+  for (let j = 0; j < 8; j++) {
+    c = (c & 1) ? (0x82F63B78 ^ (c >>> 1)) : (c >>> 1);
+  }
+  CRC32C_TABLE[i] = c >>> 0;
+}
+
+function crc32c(data: Uint8Array): number {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc = CRC32C_TABLE[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function maskCrc(crc: number): number {
+  return ((((crc >>> 15) | (crc << 17)) + 0xa282ead8) >>> 0);
+}
+
+function encodeVarint(val: number): Uint8Array {
+  const bytes: number[] = [];
+  let num = val;
+  while (num >= 0x80) {
+    bytes.push((num & 0x7f) | 0x80);
+    num >>>= 7;
+  }
+  bytes.push(num & 0x7f);
+  return new Uint8Array(bytes);
+}
+
 export class NbtReader {
   buffer: Uint8Array;
   offset = 0;
@@ -58,15 +85,11 @@ export class NbtReader {
   }
 
   readByte(): number {
-    const val = this.view.getInt8(this.offset);
-    this.offset += 1;
-    return val;
+    return this.view.getInt8(this.offset++);
   }
 
   readUByte(): number {
-    const val = this.view.getUint8(this.offset);
-    this.offset += 1;
-    return val;
+    return this.view.getUint8(this.offset++);
   }
 
   readShort(): number {
@@ -110,63 +133,65 @@ export class NbtReader {
 
   readTag(type: number): any {
     switch (type) {
-      case TAG.Byte: return { type: TAG.Byte, value: this.readByte() };
-      case TAG.Short: return { type: TAG.Short, value: this.readShort() };
-      case TAG.Int: return { type: TAG.Int, value: this.readInt() };
-      case TAG.Long: return { type: TAG.Long, value: this.readLong() };
-      case TAG.Float: return { type: TAG.Float, value: this.readFloat() };
-      case TAG.Double: return { type: TAG.Double, value: this.readDouble() };
+      case TAG.Byte: return { type, value: this.readByte() };
+      case TAG.Short: return { type, value: this.readShort() };
+      case TAG.Int: return { type, value: this.readInt() };
+      case TAG.Long: return { type, value: this.readLong() };
+      case TAG.Float: return { type, value: this.readFloat() };
+      case TAG.Double: return { type, value: this.readDouble() };
       case TAG.ByteArray: {
         const len = this.readInt();
-        const data = this.buffer.subarray(this.offset, this.offset + len);
+        const arr = this.buffer.subarray(this.offset, this.offset + len);
         this.offset += len;
-        return { type: TAG.ByteArray, value: new Uint8Array(data) };
+        return { type, value: Array.from(arr) };
       }
-      case TAG.String: return { type: TAG.String, value: this.readString() };
+      case TAG.String: return { type, value: this.readString() };
       case TAG.List: {
         const itemType = this.readUByte();
         const len = this.readInt();
-        const list: any[] = [];
-        for (let i = 0; i < len; i++) {
-          list.push(this.readTag(itemType));
-        }
-        return { type: TAG.List, itemType, value: list };
+        const list = [];
+        for (let i = 0; i < len; i++) list.push(this.readTag(itemType));
+        return { type, itemType, value: list };
       }
       case TAG.Compound: {
-        const map: Record<string, any> = {};
-        while (this.offset < this.buffer.length) {
-          const t = this.readUByte();
-          if (t === TAG.End) break;
+        const compound: Record<string, any> = {};
+        while (true) {
+          const itemType = this.readUByte();
+          if (itemType === TAG.End) break;
           const name = this.readString();
-          map[name] = this.readTag(t);
+          compound[name] = this.readTag(itemType);
         }
-        return { type: TAG.Compound, value: map };
+        return { type, value: compound };
       }
       case TAG.IntArray: {
         const len = this.readInt();
-        const arr: number[] = [];
+        const arr = [];
         for (let i = 0; i < len; i++) arr.push(this.readInt());
-        return { type: TAG.IntArray, value: arr };
+        return { type, value: arr };
       }
       case TAG.LongArray: {
         const len = this.readInt();
-        const arr: number[] = [];
+        const arr = [];
         for (let i = 0; i < len; i++) arr.push(this.readLong());
-        return { type: TAG.LongArray, value: arr };
+        return { type, value: arr };
       }
       default:
-        throw new Error('Unknown NBT tag type');
+        throw new Error(`Unknown NBT Tag Type: ${type}`);
     }
   }
 
   readRoot(): any {
     const rootType = this.readUByte();
-    if (rootType !== TAG.Compound) {
-      throw new Error('Expected compound root tag');
+    if (rootType !== TAG.Compound) throw new Error(`Expected compound root, got ${rootType}`);
+    const name = this.readString();
+    const compound: Record<string, any> = {};
+    while (true) {
+      const itemType = this.readUByte();
+      if (itemType === TAG.End) break;
+      const key = this.readString();
+      compound[key] = this.readTag(itemType);
     }
-    const rootName = this.readString();
-    const data = this.readTag(TAG.Compound);
-    return { name: rootName, ...data };
+    return { type: TAG.Compound, name, value: compound };
   }
 }
 
@@ -180,8 +205,7 @@ export class NbtWriter {
   }
 
   writeUByte(val: number) {
-    const buf = new Uint8Array([val & 0xff]);
-    this.chunks.push(buf);
+    this.chunks.push(new Uint8Array([val & 0xff]));
   }
 
   writeShort(val: number) {
@@ -282,38 +306,40 @@ export class NbtWriter {
   }
 }
 
-function parseItem(itemTag: any): ItemSlot | null {
+export function parseItem(itemTag: any): ItemSlot | null {
   if (!itemTag || !itemTag.value) return null;
   const val = itemTag.value;
-  const name = val.Name?.value || '';
+  const name = val.Name ? String(val.Name.value) : '';
   if (!name || name === 'minecraft:air') return null;
 
-  const count = Number(val.Count?.value ?? 1);
-  const slot = Number(val.Slot?.value ?? 0);
-  const damage = Number(val.Damage?.value ?? 0);
+  const count = val.Count ? Number(val.Count.value) : 1;
+  const slot = val.Slot ? Number(val.Slot.value) : 0;
+  const damage = val.Damage ? Number(val.Damage.value) : 0;
+
   const enchantments: { id: number; lvl: number }[] = [];
   let customName = '';
 
-  const extra = val.tag?.value;
-  if (extra) {
-    const enchList = extra.ench?.value;
-    if (Array.isArray(enchList)) {
-      for (const e of enchList) {
-        const id = Number(e.value?.id?.value ?? 0);
-        const lvl = Number(e.value?.lvl?.value ?? 1);
-        enchantments.push({ id, lvl });
+  if (val.tag && val.tag.value) {
+    const extra = val.tag.value;
+    if (extra.ench && extra.ench.value && Array.isArray(extra.ench.value)) {
+      for (const e of extra.ench.value) {
+        if (e.value) {
+          enchantments.push({
+            id: e.value.id ? Number(e.value.id.value) : 0,
+            lvl: e.value.lvl ? Number(e.value.lvl.value) : 1
+          });
+        }
       }
     }
-    const display = extra.display?.value;
-    if (display && display.Name?.value) {
-      customName = String(display.Name.value);
+    if (extra.display && extra.display.value && extra.display.value.Name) {
+      customName = String(extra.display.value.Name.value);
     }
   }
 
   return { name, count, slot, damage, enchantments, customName };
 }
 
-function dictToNbtItem(item: ItemSlot, slotIndex: number): any {
+export function dictToNbtItem(item: ItemSlot, slotIndex: number): any {
   const itemCompound: Record<string, any> = {
     Name: { type: TAG.String, value: item.name },
     Count: { type: TAG.Byte, value: Math.max(1, Math.min(127, item.count)) },
@@ -410,11 +436,30 @@ export function parseInventoryFromNbt(root: any): InventoryState {
   return result;
 }
 
+function findAllOccurrences(haystack: Uint8Array, needle: Uint8Array): number[] {
+  const results: number[] = [];
+  let pos = 0;
+  while (true) {
+    let found = -1;
+    outer: for (let i = pos; i <= haystack.length - needle.length; i++) {
+      for (let j = 0; j < needle.length; j++) {
+        if (haystack[i + j] !== needle[j]) continue outer;
+      }
+      found = i;
+      break;
+    }
+    if (found === -1) break;
+    results.push(found);
+    pos = found + 1;
+  }
+  return results;
+}
+
 export async function parseBedrockWorldZip(file: File | Blob, fileName: string): Promise<ParsedWorld> {
   const zip = await JSZip.loadAsync(file);
   const baseName = fileName.replace(/\.(zip|mcworld)$/i, '');
 
-  let playerKeyOffset = -1;
+  let lastPlayerKeyOffset = -1;
   let logFileName = '';
   let logData: Uint8Array | null = null;
 
@@ -424,22 +469,22 @@ export async function parseBedrockWorldZip(file: File | Blob, fileName: string):
   for (const f of files) {
     if (f.includes('db/') && (f.endsWith('.log') || f.endsWith('.ldb'))) {
       const bytes = await zip.files[f].async('uint8array');
-      const idx = findSubarray(bytes, searchTarget);
-      if (idx !== -1) {
-        playerKeyOffset = idx;
+      const matches = findAllOccurrences(bytes, searchTarget);
+      if (matches.length > 0) {
         logFileName = f;
         logData = bytes;
+        lastPlayerKeyOffset = matches[matches.length - 1]; // Pick latest entry in WAL log
         break;
       }
     }
   }
 
-  if (!logData || playerKeyOffset === -1) {
+  if (!logData || lastPlayerKeyOffset === -1) {
     throw new Error('Could not find local player data in world archive');
   }
 
   let nbtOffset = -1;
-  for (let i = playerKeyOffset + searchTarget.length; i < Math.min(logData.length - 3, playerKeyOffset + searchTarget.length + 100); i++) {
+  for (let i = lastPlayerKeyOffset + searchTarget.length; i < Math.min(logData.length - 3, lastPlayerKeyOffset + searchTarget.length + 100); i++) {
     if (logData[i] === 10 && logData[i + 1] === 0 && logData[i + 2] === 0) {
       nbtOffset = i;
       break;
@@ -453,12 +498,6 @@ export async function parseBedrockWorldZip(file: File | Blob, fileName: string):
   const nbtBytes = logData.subarray(nbtOffset);
   const reader = new NbtReader(nbtBytes);
   const rawRootNbt = reader.readRoot();
-  const nbtLength = reader.offset;
-
-  const valLenOffset = playerKeyOffset + searchTarget.length;
-  const valLenByteCount = nbtOffset - valLenOffset;
-  const recordHeaderOffset = Math.max(0, playerKeyOffset - 7);
-
   const inventory = parseInventoryFromNbt(rawRootNbt);
 
   return {
@@ -467,11 +506,6 @@ export async function parseBedrockWorldZip(file: File | Blob, fileName: string):
     zip,
     logFileName,
     logData,
-    nbtOffset,
-    nbtLength,
-    valLenOffset,
-    valLenByteCount,
-    recordHeaderOffset,
     inventory,
     rawRootNbt
   };
@@ -516,40 +550,94 @@ export async function exportModifiedWorldZip(world: ParsedWorld, updatedInventor
   const writer = new NbtWriter();
   const newNbtBytes = writer.writeRoot(world.rawRootNbt);
 
-  function encodeVarint(val: number): Uint8Array {
-    const bytes: number[] = [];
-    let num = val;
-    while (num >= 0x80) {
-      bytes.push((num & 0x7f) | 0x80);
-      num >>>= 7;
-    }
-    bytes.push(num & 0x7f);
-    return new Uint8Array(bytes);
+  // Construct valid LevelDB WriteBatch record
+  const searchTarget = new TextEncoder().encode('~local_player');
+  const batchHeader = new Uint8Array(12);
+  const dv = new DataView(batchHeader.buffer);
+  dv.setUint32(0, 0x000F4240, true);
+  dv.setUint32(4, 0x00000000, true);
+  dv.setUint32(8, 1, true);
+
+  const typePut = new Uint8Array([0x01]);
+  const keyLenVarint = encodeVarint(searchTarget.length);
+  const valLenVarint = encodeVarint(newNbtBytes.length);
+
+  const batchPayloadLen = batchHeader.length + typePut.length + keyLenVarint.length + searchTarget.length + valLenVarint.length + newNbtBytes.length;
+  const batchData = new Uint8Array(batchPayloadLen);
+  let bpos = 0;
+  batchData.set(batchHeader, bpos); bpos += batchHeader.length;
+  batchData.set(typePut, bpos); bpos += typePut.length;
+  batchData.set(keyLenVarint, bpos); bpos += keyLenVarint.length;
+  batchData.set(searchTarget, bpos); bpos += searchTarget.length;
+  batchData.set(valLenVarint, bpos); bpos += valLenVarint.length;
+  batchData.set(newNbtBytes, bpos);
+
+  // Chunk batchData into 32KB LevelDB WAL record blocks
+  const BLOCK_SIZE = 32768;
+  const chunksToAppend: Uint8Array[] = [];
+  
+  const rem = world.logData.length % BLOCK_SIZE;
+  if (rem > 0 && BLOCK_SIZE - rem < 7) {
+    chunksToAppend.push(new Uint8Array(BLOCK_SIZE - rem));
   }
 
-  const newVarint = encodeVarint(newNbtBytes.length);
+  let totalAppendedSoFar = 0;
+  for (const c of chunksToAppend) totalAppendedSoFar += c.length;
 
-  const before = world.logData.subarray(0, world.valLenOffset);
-  const after = world.logData.subarray(world.nbtOffset + world.nbtLength);
+  let pos = 0;
+  let left = batchData.length;
 
-  const updatedLog = new Uint8Array(before.length + newVarint.length + newNbtBytes.length + after.length);
-  let cur = 0;
-  updatedLog.set(before, cur); cur += before.length;
-  updatedLog.set(newVarint, cur); cur += newVarint.length;
-  updatedLog.set(newNbtBytes, cur); cur += newNbtBytes.length;
-  updatedLog.set(after, cur);
+  while (left > 0) {
+    const currentBlockOffset = (world.logData.length + totalAppendedSoFar) % BLOCK_SIZE;
+    const avail = BLOCK_SIZE - currentBlockOffset;
+    if (avail < 7) {
+      const pad = new Uint8Array(avail);
+      chunksToAppend.push(pad);
+      totalAppendedSoFar += avail;
+      continue;
+    }
+
+    const maxPayload = avail - 7;
+    const fragmentLen = Math.min(left, maxPayload);
+    const isFirst = (pos === 0);
+    const isLast = (fragmentLen === left);
+
+    let recType = 1; // FULL
+    if (isFirst && isLast) recType = 1;
+    else if (isFirst) recType = 2; // FIRST
+    else if (isLast) recType = 4; // LAST
+    else recType = 3; // MIDDLE
+
+    const payload = batchData.subarray(pos, pos + fragmentLen);
+    const toCrc = new Uint8Array(1 + payload.length);
+    toCrc[0] = recType;
+    toCrc.set(payload, 1);
+    const crcVal = maskCrc(crc32c(toCrc));
+
+    const recHeader = new Uint8Array(7);
+    const hdv = new DataView(recHeader.buffer);
+    hdv.setUint32(0, crcVal, true);
+    hdv.setUint16(4, fragmentLen, true);
+    hdv.setUint8(6, recType);
+
+    chunksToAppend.push(recHeader);
+    chunksToAppend.push(payload);
+    totalAppendedSoFar += (7 + fragmentLen);
+
+    pos += fragmentLen;
+    left -= fragmentLen;
+  }
+
+  let appendLen = 0;
+  for (const c of chunksToAppend) appendLen += c.length;
+  const updatedLog = new Uint8Array(world.logData.length + appendLen);
+  updatedLog.set(world.logData, 0);
+  let cur = world.logData.length;
+  for (const c of chunksToAppend) {
+    updatedLog.set(c, cur);
+    cur += c.length;
+  }
 
   world.zip.file(world.logFileName, updatedLog);
-
   return await world.zip.generateAsync({ type: 'blob', mimeType: 'application/zip', compression: 'DEFLATE' });
-}
-
-function findSubarray(haystack: Uint8Array, needle: Uint8Array): number {
-  outer: for (let i = 0; i <= haystack.length - needle.length; i++) {
-    for (let j = 0; j < needle.length; j++) {
-      if (haystack[i + j] !== needle[j]) continue outer;
-    }
-    return i;
-  }
-  return -1;
 }

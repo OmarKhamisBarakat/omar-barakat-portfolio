@@ -855,14 +855,27 @@ export default function MinecraftEditor() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-mono uppercase text-white/50 block mb-1">Count</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-mono uppercase text-white/50">Count</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const item = ITEMS_BY_ID.get(editorItemId);
+                          setEditorCount(item?.maxStack || 64);
+                        }}
+                        className="text-[10px] font-mono font-bold text-pink-400 hover:text-pink-300 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+                        title="Set to maximum stack size"
+                      >
+                        MAX {ITEMS_BY_ID.get(editorItemId)?.maxStack ? `(${ITEMS_BY_ID.get(editorItemId)?.maxStack})` : ''}
+                      </button>
+                    </div>
                     <input
                       type="number"
                       min={1}
                       max={127}
                       value={editorCount}
                       onChange={(e) => setEditorCount(parseInt(e.target.value) || 1)}
-                      className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-3 py-1.5 text-xs sm:text-sm text-white/90 focus:outline-none focus:border-emerald-400 font-mono"
+                      className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-3 py-1.5 text-xs sm:text-sm text-white/90 focus:outline-none focus:border-pink-400 font-mono"
                     />
                   </div>
                   <div>
