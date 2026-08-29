@@ -1,66 +1,80 @@
-import { motion } from "motion/react";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, ArrowUpRight } from "lucide-react";
+import {
+  Eyebrow, Reveal, GithubIcon, LinkedinIcon, PINK, TEAL, AMBER, INK,
+} from "../components/ui";
+
+const methods = [
+  { icon: Mail, accent: PINK, label: "omar.khamis.barakat@gmail.com", href: "mailto:omar.khamis.barakat@gmail.com" },
+  { icon: Phone, accent: TEAL, label: "+20 102 730 4125", href: "tel:+201027304125" },
+  { icon: MapPin, accent: AMBER, label: "Cairo, Egypt", href: undefined as string | undefined },
+];
+
+const socials = [
+  { icon: <GithubIcon size={18} />, label: "GITHUB", href: "https://github.com/OmarKhamisBarakat", accent: PINK },
+  { icon: <LinkedinIcon size={18} />, label: "LINKEDIN", href: "https://www.linkedin.com/in/omar-barakat-82b1a62a6/", accent: TEAL },
+];
 
 export default function Contact() {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-20">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-24">
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-8">Let's Connect.</h1>
-          <p className="text-xl text-on-surface-variant mb-12 max-w-lg leading-relaxed">
-            Interested in collaboration, internship opportunities, or just want to talk tech? Drop a message.
-          </p>
+    <div className="max-w-7xl mx-auto px-6 py-24 sm:py-32">
+      <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <Reveal y={12}><Eyebrow accent={TEAL} className="mb-6">SAY HELLO</Eyebrow></Reveal>
+          <Reveal delay={0.06}>
+            <h1 className="font-pixel vice-text leading-[0.95] text-[13vw] sm:text-6xl lg:text-7xl">
+              LET'S<br />CONNECT
+            </h1>
+          </Reveal>
+          <Reveal delay={0.14}>
+            <p className="mt-8 text-lg text-white/65 max-w-md leading-relaxed">
+              Collaboration, an internship, or just talking tech — the inbox is open.
+              The fastest way to reach me is email.
+            </p>
+          </Reveal>
 
-          <div className="space-y-6">
-            {[
-              { icon: <Mail className="text-primary" />, label: "omar.khamis.barakat@gmail.com", href: "mailto:omar.khamis.barakat@gmail.com" },
-              { icon: <MapPin className="text-primary" />, label: "Cairo, Egypt" },
-              { icon: <Phone className="text-primary" />, label: "+20 102 730 4125" }
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-4">
-                {item.icon}
-                {item.href ? (
-                  <a href={item.href} className="text-on-surface-variant hover:text-primary transition-colors">{item.label}</a>
-                ) : (
-                  <span className="text-on-surface-variant">{item.label}</span>
-                )}
-              </div>
+          <div className="mt-10 flex flex-wrap gap-3">
+            {socials.map((s) => (
+              <a
+                key={s.label} href={s.href} target="_blank" rel="noreferrer"
+                className="font-pixel text-xs inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-white/15 text-white/80 hover:-translate-y-0.5 transition-all"
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = `${s.accent}88`)}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)")}
+              >
+                {s.icon} {s.label}
+              </a>
             ))}
           </div>
+        </div>
 
-          {/* Social Links */}
-          <div className="flex gap-6 mt-12">
-            <a href="https://github.com/OmarKhamisBarakat" className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 text-sm font-medium" aria-label="GitHub">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
-                <path d="M9 18c-4.51 2-5-2-7-2"/>
-              </svg>
-              GitHub
-            </a>
-            <a href="https://www.linkedin.com/in/omar-barakat-82b1a62a6/" className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 text-sm font-medium" aria-label="LinkedIn">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
-                <rect width="4" height="12" x="2" y="9"/>
-                <circle cx="4" cy="4" r="2"/>
-              </svg>
-              LinkedIn
-            </a>
-          </div>
-        </motion.div>
+        {/* method cards */}
+        <div className="space-y-4">
+          {methods.map((m, i) => {
+            const inner = (
+              <div className="card rounded-2xl p-6 flex items-center gap-4 group">
+                <div className="w-11 h-11 rounded-xl grid place-items-center shrink-0" style={{ background: `${m.accent}18`, color: m.accent }}>
+                  <m.icon size={20} />
+                </div>
+                <span className="text-white/80 flex-grow break-all">{m.label}</span>
+                {m.href && <ArrowUpRight size={16} className="text-white/30 group-hover:text-white transition-colors" />}
+              </div>
+            );
+            return (
+              <Reveal key={m.label} delay={i * 0.08}>
+                {m.href ? <a href={m.href}>{inner}</a> : inner}
+              </Reveal>
+            );
+          })}
 
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <p className="text-lg text-on-surface-variant leading-relaxed">
-            The easiest way to reach me is through my email.
-          </p>
-        </motion.div>
+          <Reveal delay={0.28}>
+            <a
+              href="/Omar_Khamis_Resume.pdf" download
+              className="font-pixel text-sm inline-flex w-full justify-center items-center gap-2 px-6 py-4 rounded-2xl transition-transform hover:-translate-y-0.5"
+              style={{ background: PINK, color: INK }}
+            >
+              DOWNLOAD CV
+            </a>
+          </Reveal>
+        </div>
       </div>
     </div>
   );

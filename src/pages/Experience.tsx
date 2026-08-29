@@ -1,103 +1,93 @@
-import { motion } from "motion/react";
+import { Award, BadgeCheck } from "lucide-react";
+import { SectionHead, Reveal, Chip, PINK, TEAL, AMBER, accentAt } from "../components/ui";
 
 const experience = [
   {
-    title: "Data Annotator (Contract)",
-    company: "DataAnnotation Tech",
-    period: "May 2025 – Feb 2026",
-    location: "Remote",
+    title: "Data Annotator (Contract)", company: "DataAnnotation Tech",
+    period: "MAY 2025 – FEB 2026", location: "Remote",
     bullets: [
       "Annotated NLP datasets used to train large language models.",
-      "Provided contextual feedback in reinforcement learning from human feedback workflows.",
-      "Contributed to human-in-the-loop evaluation pipelines improving model accuracy."
-    ]
+      "Gave contextual feedback in RLHF (reinforcement learning from human feedback) workflows.",
+      "Contributed to human-in-the-loop evaluation pipelines that improved model accuracy.",
+    ],
   },
   {
-    title: "Engineering Intern",
-    company: "Deutschland Technologies",
-    period: "Jun 2025 – Aug 2025",
-    location: "Cairo, Egypt",
+    title: "Engineering Intern", company: "Deutschland Technologies",
+    period: "JUN 2025 – AUG 2025", location: "Cairo, Egypt",
     bullets: [
-      "Designed fire alarm systems including sensors, panels, and output devices.",
-      "Produced technical blueprints using AutoCAD.",
-      "Assisted in project planning and scheduling using Oracle Primavera."
-    ]
-  }
+      "Designed fire-alarm systems — sensors, panels and output devices.",
+      "Produced technical blueprints in AutoCAD.",
+      "Assisted project planning and scheduling in Oracle Primavera.",
+    ],
+  },
+];
+
+const achievements = [
+  { title: "Best Member — Content Creation Team", org: "Hult Prize · Zewail City", accent: PINK },
+  { title: "Participant — UGRF Competition 2025", org: "20th Edition", accent: TEAL },
 ];
 
 export default function Experience() {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-20">
-      <h1 className="text-5xl font-bold tracking-tighter mb-16">Experience</h1>
+    <div className="max-w-7xl mx-auto px-6 py-20 sm:py-24">
+      <SectionHead eyebrow="THE ROAD SO FAR" title="EXPERIENCE" accent={PINK} />
 
-      <div className="space-y-16">
-        {experience.map((item, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.15, duration: 0.5 }}
-            className="relative pl-8 border-l-2 border-outline-variant/30"
-          >
-            <div className="absolute left-[-6px] top-2 w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_rgba(173,198,255,0.8)]" />
-            
-            <div className="flex flex-col md:flex-row justify-between items-start mb-4 gap-2">
-              <div>
-                <h3 className="text-2xl font-bold">{item.title}</h3>
-                <p className="text-primary font-medium text-lg">{item.company}</p>
+      <div className="space-y-4">
+        {experience.map((item, i) => {
+          const accent = accentAt(i);
+          return (
+            <Reveal key={item.company} delay={i * 0.08}>
+              <div className="relative card rounded-2xl p-7 pl-9">
+                <span className="absolute left-0 top-7 bottom-7 w-[3px] rounded-full" style={{ background: accent }} />
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-2 mb-5">
+                  <div>
+                    <h3 className="font-pixel text-base sm:text-lg text-white/90">{item.title}</h3>
+                    <p className="mt-1 text-sm" style={{ color: accent }}>{item.company}</p>
+                  </div>
+                  <div className="flex flex-col md:items-end">
+                    <Chip accent={accent}>{item.period}</Chip>
+                    <span className="text-white/40 text-xs mt-2">{item.location}</span>
+                  </div>
+                </div>
+                <ul className="space-y-2.5">
+                  {item.bullets.map((b, j) => (
+                    <li key={j} className="text-white/55 text-sm leading-relaxed flex gap-3">
+                      <span style={{ color: accent }} className="mt-0.5 shrink-0">▸</span>{b}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div className="text-right">
-                <span className="text-on-surface-variant font-mono text-sm block">{item.period}</span>
-                <span className="text-on-surface-variant font-mono text-xs">{item.location}</span>
-              </div>
-            </div>
-            
-            <ul className="space-y-3 mt-6">
-              {item.bullets.map((bullet, j) => (
-                <li key={j} className="text-on-surface-variant leading-relaxed flex gap-3">
-                  <span className="text-primary mt-1.5 shrink-0">▸</span>
-                  {bullet}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        ))}
+            </Reveal>
+          );
+        })}
       </div>
 
-      {/* Achievements Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-        className="mt-24"
-      >
-        <h2 className="text-3xl font-bold tracking-tighter mb-10">Achievements</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            { title: "Best Member – Content Creation Team", org: "Hult Prize (Zewail City)" },
-            { title: "Participant – UGRF Competition 2025", org: "20th Edition" }
-          ].map((item, i) => (
-            <div key={i} className="glass-panel p-6 rounded-2xl">
-              <h3 className="font-bold text-lg">{item.title}</h3>
-              <p className="text-primary text-sm font-mono mt-1">{item.org}</p>
-            </div>
+      {/* achievements + certs */}
+      <div className="mt-20">
+        <SectionHead eyebrow="ALONG THE WAY" title="HONOURS" accent={TEAL} />
+        <div className="grid md:grid-cols-2 gap-5">
+          {achievements.map((a, i) => (
+            <Reveal key={a.title} delay={i * 0.06}>
+              <div className="card rounded-2xl p-6 flex items-start gap-4">
+                <Award size={20} style={{ color: a.accent }} className="mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="font-bold text-white">{a.title}</h3>
+                  <p className="text-sm mt-1" style={{ color: a.accent }}>{a.org}</p>
+                </div>
+              </div>
+            </Reveal>
           ))}
+          <Reveal delay={0.12} className="md:col-span-2">
+            <div className="card rounded-2xl p-6 flex items-start gap-4" style={{ borderColor: `${AMBER}33` }}>
+              <BadgeCheck size={20} style={{ color: AMBER }} className="mt-0.5 shrink-0" />
+              <div>
+                <h3 className="font-bold text-white">Cross-Platform Flutter Development — Professional Certificate</h3>
+                <p className="text-sm mt-1" style={{ color: AMBER }}>DEPI Initiative · Expected 2026</p>
+              </div>
+            </div>
+          </Reveal>
         </div>
-      </motion.div>
-
-      {/* Certifications */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
-        className="mt-16"
-      >
-        <h2 className="text-3xl font-bold tracking-tighter mb-10">Certifications</h2>
-        <div className="glass-panel p-6 rounded-2xl">
-          <h3 className="font-bold text-lg">Cross Platform Flutter Development Professional Certificate</h3>
-          <p className="text-primary text-sm font-mono mt-1">DEPI Initiative · Expected 2026</p>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
