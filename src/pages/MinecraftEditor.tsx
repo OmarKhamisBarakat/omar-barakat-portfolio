@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { saveAs } from 'file-saver';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
@@ -521,31 +522,13 @@ export default function MinecraftEditor() {
 
 
 
-  const downloadFile = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.rel = 'noopener';
-    a.style.position = 'fixed';
-    a.style.left = '-9999px';
-    a.style.top = '-9999px';
-    document.body.appendChild(a);
-    const evt = new MouseEvent('click', { bubbles: false, cancelable: true, view: window });
-    a.dispatchEvent(evt);
-    setTimeout(() => {
-      try { document.body.removeChild(a); } catch (_) {}
-      URL.revokeObjectURL(url);
-    }, 120000);
-  };
-
   const exportZip = async () => {
     if (!world) return;
     setIsLoading(true);
     setLoadingText('Packaging world into ZIP archive...');
     try {
       const blob = await exportModifiedWorldZip(world, inventory);
-      downloadFile(blob, `${world.baseName}_modified.zip`);
+      saveAs(blob, `${world.baseName}_modified.zip`);
       notify('Export complete! ZIP downloaded.');
     } catch (err: any) {
       notify(err.message || 'Export failed', 'error');
@@ -560,7 +543,7 @@ export default function MinecraftEditor() {
     setLoadingText('Packaging for iOS Minecraft import (.mcworld)...');
     try {
       const blob = await exportModifiedWorldZip(world, inventory);
-      downloadFile(blob, `${world.baseName}_modified.mcworld`);
+      saveAs(blob, `${world.baseName}_modified.mcworld`);
       notify('Export complete! Tap the .mcworld file on iOS to auto-open in Minecraft.');
     } catch (err: any) {
       notify(err.message || 'Export failed', 'error');
