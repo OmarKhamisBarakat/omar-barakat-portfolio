@@ -11,7 +11,8 @@ import {
   Check, 
   Wand2, 
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Package
 } from 'lucide-react';
 import { 
   MINECRAFT_ITEMS, 
@@ -29,7 +30,7 @@ import {
 const ITEMS_BY_ID = new Map(MINECRAFT_ITEMS.map(i => [i.id, i]));
 const ENCHANTS_BY_ID = new Map(MINECRAFT_ENCHANTMENTS.map(e => [e.id, e]));
 
-const ARMOR_ICONS = ['🪖', '👕', '👖', '👢'];
+const ARMOR_ICONS = ['🪖', '🦺', '👖', '🥾'];
 
 function getDisplayName(itemId: string): string {
   const it = ITEMS_BY_ID.get(itemId);
@@ -150,13 +151,15 @@ export default function MinecraftEditor() {
       return;
     }
 
+    const orig = inventory[selectedSlot.section][selectedSlot.index];
     const updatedItem: ItemSlot = {
       name: editorItemId,
       count: Math.max(1, Math.min(127, editorCount)),
       slot: selectedSlot.section === 'main' ? selectedSlot.index + 9 : selectedSlot.index,
       damage: editorDamage || 0,
       enchantments: [...editorEnchantments],
-      customName: editorCustomName.trim()
+      customName: editorCustomName.trim(),
+      _raw: (orig && orig.name === editorItemId) ? orig._raw : undefined
     };
 
     setInventory(prev => {
@@ -220,7 +223,7 @@ export default function MinecraftEditor() {
     ];
 
     let upgraded = 0;
-    const upgradeSlot = (item: ItemSlot | null, slotIdx: number): ItemSlot | null => {
+    const upgradeSlot = (item: ItemSlot | null): ItemSlot | null => {
       if (!item || !item.name) return item;
       const n = item.name.toLowerCase();
       if (n.includes('pickaxe') || n.includes('shovel') || n.includes('axe') || n.includes('hoe')) {
@@ -235,8 +238,8 @@ export default function MinecraftEditor() {
 
     setInventory(prev => ({
       ...prev,
-      hotbar: prev.hotbar.map((it, idx) => upgradeSlot(it, idx)),
-      main: prev.main.map((it, idx) => upgradeSlot(it, idx + 9))
+      hotbar: prev.hotbar.map(it => upgradeSlot(it)),
+      main: prev.main.map(it => upgradeSlot(it))
     }));
 
     if (selectedSlot) {
@@ -244,7 +247,7 @@ export default function MinecraftEditor() {
       if (it) loadItemIntoEditor(it);
     }
 
-    notify(`Upgraded ${upgraded} tools with Max Enchants (No Silk Touch)!`);
+    notify(`Upgraded ${upgraded} tools with Max Enchants (Fortune)!`);
   };
 
   const maxEnchantGodArmor = () => {
@@ -262,12 +265,14 @@ export default function MinecraftEditor() {
         count: 1,
         slot: i,
         damage: 0,
-        enchantments: cfg.enchs
+        enchantments: cfg.enchs,
+        customName: 'God ' + getDisplayName(cfg.name)
       }))
     }));
 
-    notify('Equipped God Armor Set with Max Enchants!');
+    notify('Equipped God Netherite Armor Set!');
   };
+
   const clearAllSlots = () => {
     setInventory({
       hotbar: Array(9).fill(null),
@@ -300,12 +305,12 @@ export default function MinecraftEditor() {
       const next = { ...prev };
       const h = [...next.hotbar];
       const m = [...next.main];
-      for (let i = 0; i < 9; i++) { if (!h[i] || !h[i]?.name) { h[i] = { name: 'minecraft:golden_apple', count: 64, slot: i, damage: 0, enchantments: [] }; count++; } }
-      for (let i = 0; i < 27; i++) { if (!m[i] || !m[i]?.name) { m[i] = { name: 'minecraft:golden_apple', count: 64, slot: i + 9, damage: 0, enchantments: [] }; count++; } }
+      for (let i = 0; i < 9; i++) { if (!h[i] || !h[i]?.name) { h[i] = { name: 'minecraft:enchanted_golden_apple', count: 64, slot: i, damage: 0, enchantments: [] }; count++; } }
+      for (let i = 0; i < 27; i++) { if (!m[i] || !m[i]?.name) { m[i] = { name: 'minecraft:enchanted_golden_apple', count: 64, slot: i + 9, damage: 0, enchantments: [] }; count++; } }
       next.hotbar = h; next.main = m;
       return next;
     });
-    notify(`Filled ${count} empty slots with 64 Golden Apples!`);
+    notify(`Filled ${count} empty slots with Enchanted Golden Apples!`);
   };
 
   const fillEmptyEnderPearls = () => {
@@ -452,17 +457,17 @@ export default function MinecraftEditor() {
       hotbar: [
         { name: 'minecraft:netherite_sword', count: 1, slot: 0, damage: 0, enchantments: swordEnchs },
         { name: 'minecraft:ender_pearl', count: 16, slot: 1, damage: 0, enchantments: [] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 2, damage: 0, enchantments: [] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 3, damage: 0, enchantments: [] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 4, damage: 0, enchantments: [] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 5, damage: 0, enchantments: [] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 6, damage: 0, enchantments: [] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 7, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 2, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 3, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 4, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 5, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 6, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 7, damage: 0, enchantments: [] },
         { name: 'minecraft:totem_of_undying', count: 1, slot: 8, damage: 0, enchantments: [] }
       ],
       main: [
         ...Array(9).fill(null).map((_, i) => ({ name: 'minecraft:totem_of_undying', count: 1, slot: i + 9, damage: 0, enchantments: [] as {id:number;lvl:number}[] })),
-        ...Array(9).fill(null).map((_, i) => ({ name: 'minecraft:golden_apple', count: 64, slot: i + 18, damage: 0, enchantments: [] as {id:number;lvl:number}[] })),
+        ...Array(9).fill(null).map((_, i) => ({ name: 'minecraft:enchanted_golden_apple', count: 64, slot: i + 18, damage: 0, enchantments: [] as {id:number;lvl:number}[] })),
         ...Array(9).fill(null).map((_, i) => ({ name: 'minecraft:ender_pearl', count: 16, slot: i + 27, damage: 0, enchantments: [] as {id:number;lvl:number}[] }))
       ],
       armor: [
@@ -486,7 +491,7 @@ export default function MinecraftEditor() {
         { name: 'minecraft:netherite_shovel', count: 1, slot: 2, damage: 0, enchantments: [{ id: 15, lvl: 5 }, { id: 18, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
         { name: 'minecraft:netherite_sword', count: 1, slot: 3, damage: 0, enchantments: [{ id: 9, lvl: 5 }, { id: 14, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
         { name: 'minecraft:bow', count: 1, slot: 4, damage: 0, enchantments: [{ id: 19, lvl: 5 }, { id: 22, lvl: 2 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 5, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 5, damage: 0, enchantments: [] },
         { name: 'minecraft:cooked_beef', count: 64, slot: 6, damage: 0, enchantments: [] },
         { name: 'minecraft:torch', count: 64, slot: 7, damage: 0, enchantments: [] },
         { name: 'minecraft:crafting_table', count: 1, slot: 8, damage: 0, enchantments: [] }
@@ -519,8 +524,6 @@ export default function MinecraftEditor() {
     });
     notify('Elytra Flight Kit equipped! Elytra + Fireworks loaded.');
   };
-
-
 
   const exportZip = async () => {
     if (!world) return;
@@ -558,7 +561,7 @@ export default function MinecraftEditor() {
         { name: 'minecraft:netherite_pickaxe', count: 1, slot: 0, damage: 0, enchantments: [{ id: 15, lvl: 5 }, { id: 18, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
         { name: 'minecraft:netherite_shovel', count: 1, slot: 1, damage: 0, enchantments: [{ id: 15, lvl: 5 }, { id: 18, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
         { name: 'minecraft:netherite_sword', count: 1, slot: 2, damage: 0, enchantments: [{ id: 9, lvl: 5 }, { id: 14, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
-        { name: 'minecraft:golden_apple', count: 64, slot: 3, damage: 0, enchantments: [] },
+        { name: 'minecraft:enchanted_golden_apple', count: 64, slot: 3, damage: 0, enchantments: [] },
         { name: 'minecraft:firework_rocket', count: 64, slot: 4, damage: 0, enchantments: [] },
         null, null, null, null
       ],
@@ -571,24 +574,23 @@ export default function MinecraftEditor() {
       ],
       offhand: [{ name: 'minecraft:totem_of_undying', count: 1, slot: 0, damage: 0, enchantments: [] }]
     };
-
     setInventory(demo);
     setSelectedSlot({ section: 'hotbar', index: 0 });
     loadItemIntoEditor(demo.hotbar[0]);
-    notify('Loaded interactive demo inventory matrix!');
+    notify('Loaded interactive demo world!');
   };
 
   const renderSlot = (item: ItemSlot | null, section: 'hotbar' | 'main' | 'armor' | 'offhand', index: number) => {
     const isSelected = selectedSlot?.section === section && selectedSlot?.index === index;
-    const isEnchanted = item && item.enchantments && item.enchantments.length > 0;
+    const isEnchanted = item?.enchantments && item.enchantments.length > 0;
 
     return (
       <button
         key={`${section}-${index}`}
         onClick={() => selectSlot(section, index)}
-        className={`relative w-11 h-11 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center transition-all cursor-pointer select-none
+        className={`relative aspect-square rounded-xl border flex items-center justify-center p-1 sm:p-1.5 transition-all cursor-pointer select-none
           ${isSelected 
-            ? 'border-emerald-400 bg-emerald-950/40 ring-2 ring-pink-400/50 scale-105 shadow-lg shadow-emerald-950/50' 
+            ? 'border-emerald-400 bg-emerald-950/40 ring-2 ring-emerald-400/50 scale-105 shadow-lg shadow-emerald-950/50' 
             : 'border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]'}
           ${isEnchanted ? 'after:absolute after:inset-0 after:rounded-xl after:bg-gradient-to-tr after:from-purple-500/20 after:to-transparent after:pointer-events-none' : ''}`}
       >
@@ -610,11 +612,11 @@ export default function MinecraftEditor() {
               </span>
             )}
             {isEnchanted && (
-              <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 text-[8px] sm:text-[10px] text-purple-300">✨</span>
+              <Sparkles size={11} className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 text-purple-300 pointer-events-none" />
             )}
           </>
         ) : (
-          <span className="text-white/20 text-xs font-mono">
+          <span className="text-white/25 text-xs font-mono select-none">
             {section === 'armor' ? ARMOR_ICONS[index] : section === 'offhand' ? '🛡️' : index + (section === 'main' ? 9 : 1)}
           </span>
         )}
@@ -627,7 +629,7 @@ export default function MinecraftEditor() {
       <input 
         type="file" 
         ref={fileInputRef} 
-        accept=".zip,.mcworld" 
+        accept=".zip,.mcworld,.dat" 
         className="hidden" 
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -643,8 +645,8 @@ export default function MinecraftEditor() {
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             className={`fixed top-4 right-4 sm:top-6 sm:right-6 z-50 px-4 py-2.5 sm:px-5 sm:py-3 rounded-2xl font-medium shadow-2xl flex items-center gap-3 backdrop-blur-xl border ${
               notification.type === 'success' 
-                ? 'bg-teal-950/80 border-teal-500/40 text-teal-200' 
-                : 'bg-rose-950/80 border-rose-500/40 text-rose-200'
+                ? 'bg-teal-950/90 border-teal-500/40 text-teal-200' 
+                : 'bg-rose-950/90 border-rose-500/40 text-rose-200'
             }`}
           >
             {notification.type === 'success' ? <Check size={18} /> : <ShieldAlert size={18} />}
@@ -653,67 +655,76 @@ export default function MinecraftEditor() {
         )}
       </AnimatePresence>
 
-      <div className="max-w-7xl mx-auto flex flex-col gap-5 sm:gap-6">
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.02] border border-white/10 p-4 sm:p-5 rounded-3xl backdrop-blur-2xl">
+      <AnimatePresence>
+        {isLoading && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-4">
+            <div className="w-12 h-12 rounded-full border-4 border-emerald-500/20 border-t-emerald-400 animate-spin" />
+            <p className="text-sm sm:text-base font-mono text-emerald-300">{loadingText}</p>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <div className="max-w-6xl mx-auto flex flex-col gap-5 sm:gap-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/[0.02] border border-white/10 p-4 sm:p-6 rounded-3xl backdrop-blur-2xl">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-amber-500 flex items-center justify-center text-xl sm:text-2xl shadow-lg shadow-pink-500/20">
-              ⛏️
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-2xl">
+              📦
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-xl font-bold tracking-tight">Minecraft Bedrock Inventory Matrix</h1>
-                <span className="bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded-full tracking-wider">
-                  UNLISTED // v2.0
+                <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">Bedrock Inventory Matrix</h1>
+                <span className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold uppercase">
+                  iOS & PC
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-white/50 font-mono mt-0.5">
-                {world ? world.fileName : 'Direct .zip / .mcworld Player Inventory Manipulator'}
+              <p className="text-xs text-white/50 font-mono mt-0.5">
+                {world ? world.fileName : 'Direct .mcworld / .zip Player Inventory Editor'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] text-white px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-medium border border-white/10 transition-all cursor-pointer"
+              className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] text-white/90 border border-white/10 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer"
             >
               <Upload size={15} />
               <span>{world ? 'Change World' : 'Upload World'}</span>
             </button>
 
             {world && (
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <>
                 <button
                   onClick={exportMcWorld}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-pink-600 to-amber-500 hover:brightness-110 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-pink-600/30 transition-all cursor-pointer"
-                  title="Direct 1-Tap iOS Import file"
+                  className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-500/25 cursor-pointer"
                 >
                   <Download size={15} />
-                  <span>Export .mcworld (iOS 1-Tap)</span>
+                  <span>Save .mcworld (iOS)</span>
                 </button>
                 <button
                   onClick={exportZip}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-medium border border-white/10 transition-all cursor-pointer"
+                  className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] text-white/80 border border-white/10 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer"
                 >
-                  <Download size={15} />
-                  <span>ZIP</span>
+                  <span>Export .zip</span>
                 </button>
-              </div>
+              </>
             )}
           </div>
-        </header>
+        </div>
 
+        {/* Upload Hero */}
         {!world && (
-          <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 sm:p-8 text-center flex flex-col items-center justify-center gap-5 py-12 sm:py-16 backdrop-blur-xl">
+          <div className="bg-white/[0.02] border border-dashed border-emerald-500/30 rounded-3xl p-8 sm:p-12 flex flex-col items-center justify-center text-center gap-5 backdrop-blur-xl">
             <div 
               onClick={() => fileInputRef.current?.click()}
-              className="w-full max-w-xl border-2 border-dashed border-white/20 hover:border-pink-400/60 rounded-3xl p-8 sm:p-10 flex flex-col items-center justify-center gap-4 bg-white/[0.015] hover:bg-white/[0.04] transition-all cursor-pointer group"
+              className="cursor-pointer flex flex-col items-center gap-3 p-6 rounded-2xl hover:bg-emerald-950/20 transition-all border border-transparent hover:border-emerald-500/30"
             >
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-2xl sm:text-3xl group-hover:scale-110 transition-transform">
-                📂
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-3xl">
+                <Upload size={32} />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-white/90">Drop Bedrock World File Here</h3>
+                <h3 className="text-base sm:text-lg font-bold text-white/90">Choose or Drop Bedrock World File Here</h3>
                 <p className="text-xs sm:text-sm text-white/50 mt-1">Supports iOS exports, .mcworld and .zip files</p>
               </div>
             </div>
@@ -722,7 +733,7 @@ export default function MinecraftEditor() {
               <span>Or test with an interactive preview:</span>
               <button
                 onClick={loadDemoWorld}
-                className="flex items-center gap-1.5 text-teal-400 hover:text-teal-300 font-semibold cursor-pointer underline underline-offset-4"
+                className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer underline underline-offset-4"
               >
                 Load Demo Inventory <ArrowRight size={13} />
               </button>
@@ -730,14 +741,15 @@ export default function MinecraftEditor() {
           </div>
         )}
 
+        {/* Presets Bar */}
         <div className="bg-white/[0.02] border border-white/10 rounded-3xl backdrop-blur-xl overflow-hidden">
           <button
             onClick={() => setPresetsOpen(!presetsOpen)}
             className="w-full flex items-center justify-between p-3 sm:p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
           >
             <span className="text-[11px] sm:text-xs font-mono uppercase text-white/50 flex items-center gap-1.5">
-              <Wand2 size={13} /> Presets & Loadouts
-              <span className="bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-1">13</span>
+              <Wand2 size={13} /> Quick Presets & Loadouts
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-1">13</span>
             </span>
             <Sparkles size={14} className={`text-white/40 transition-transform ${presetsOpen ? 'rotate-45' : ''}`} />
           </button>
@@ -760,14 +772,14 @@ export default function MinecraftEditor() {
                       <button onClick={fillEmptyGoldenApples} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🍎 64 Golden Apples</button>
                       <button onClick={fillEmptyEnderPearls} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🔮 16 Ender Pearls</button>
                       <button onClick={fillEmptyTotems} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🗿 Totems</button>
-                      <button onClick={fillEmptyFireworks} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🎆 64 Fireworks</button>
+                      <button onClick={fillEmptyFireworks} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🚀 64 Fireworks</button>
                     </div>
                   </div>
 
                   <div>
                     <p className="text-[10px] font-mono uppercase text-teal-400/70 mb-1.5 tracking-wider">Max Enchant Weapons</p>
                     <div className="flex flex-wrap gap-1.5">
-                      <button onClick={maxEnchantToolsNoSilkTouch} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⛏️ Tools (No Silk Touch)</button>
+                      <button onClick={maxEnchantToolsNoSilkTouch} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⛏️ Tools (Fortune)</button>
                       <button onClick={maxEnchantSword} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⚔️ God Sword</button>
                       <button onClick={maxEnchantBow} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🏹 God Bow</button>
                       <button onClick={maxEnchantTrident} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🔱 God Trident</button>
@@ -776,12 +788,12 @@ export default function MinecraftEditor() {
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-mono uppercase text-pink-400/70 mb-1.5 tracking-wider">Full Loadouts</p>
+                    <p className="text-[10px] font-mono uppercase text-emerald-400/70 mb-1.5 tracking-wider">Full Loadouts</p>
                     <div className="flex flex-wrap gap-1.5">
-                      <button onClick={maxEnchantGodArmor} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🛡️ God Armor</button>
-                      <button onClick={pvpLoadout} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⚔️ PvP Loadout</button>
-                      <button onClick={survivalStarterKit} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🏕️ Survival Kit</button>
-                      <button onClick={elytraKit} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🪽 Elytra Kit</button>
+                      <button onClick={maxEnchantGodArmor} className="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🛡️ God Netherite Armor</button>
+                      <button onClick={pvpLoadout} className="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⚔️ PvP Loadout</button>
+                      <button onClick={survivalStarterKit} className="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🎒 Survival Kit</button>
+                      <button onClick={elytraKit} className="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🪽 Elytra Kit</button>
                     </div>
                   </div>
 
@@ -794,37 +806,42 @@ export default function MinecraftEditor() {
           </AnimatePresence>
         </div>
 
+        {/* Matrix & Inspector Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+          {/* Inventory Panel */}
           <div className="lg:col-span-2 bg-white/[0.02] border border-white/10 p-4 sm:p-6 rounded-3xl flex flex-col gap-5 sm:gap-6 backdrop-blur-2xl">
             <div>
-              <span className="text-xs font-mono uppercase text-white/50 block mb-2.5">Equipment & Offhand</span>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {inventory.armor.map((it, idx) => renderSlot(it, 'armor', idx))}
-                <div className="w-[1px] h-8 sm:h-10 bg-white/10 mx-1 sm:mx-2" />
+              <span className="text-xs font-mono uppercase text-white/50 block mb-2.5">Armor & Offhand Equipment</span>
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                  {inventory.armor.map((it, idx) => renderSlot(it, 'armor', idx))}
+                </div>
+                <div className="w-px h-10 bg-white/10" />
                 {renderSlot(inventory.offhand[0], 'offhand', 0)}
               </div>
             </div>
 
             <div>
-              <span className="text-xs font-mono uppercase text-white/50 block mb-2.5">Storage Inventory (27 Slots)</span>
-              <div className="grid grid-cols-9 gap-1.5 sm:gap-3 overflow-x-auto pb-2">
+              <span className="text-xs font-mono uppercase text-white/50 block mb-2.5">Storage Backpack (Slots 9–35)</span>
+              <div className="grid grid-cols-9 gap-1.5 sm:gap-2.5 overflow-x-auto pb-1">
                 {inventory.main.map((it, idx) => renderSlot(it, 'main', idx))}
               </div>
             </div>
 
             <div className="pt-3 sm:pt-4 border-t border-white/10">
-              <span className="text-xs font-mono uppercase text-pink-400 block mb-2.5">Hotbar (Active Slots 1-9)</span>
-              <div className="grid grid-cols-9 gap-1.5 sm:gap-3 overflow-x-auto pb-2">
+              <span className="text-xs font-mono uppercase text-emerald-400 block mb-2.5">Hotbar (Active Slots 1–9)</span>
+              <div className="grid grid-cols-9 gap-1.5 sm:gap-2.5 overflow-x-auto pb-1">
                 {inventory.hotbar.map((it, idx) => renderSlot(it, 'hotbar', idx))}
               </div>
             </div>
           </div>
 
+          {/* Slot Inspector Panel */}
           <div className="bg-white/[0.02] border border-white/10 p-4 sm:p-6 rounded-3xl flex flex-col gap-5 backdrop-blur-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3 sm:pb-4">
               <div>
                 <h3 className="font-bold text-sm sm:text-base text-white/90">Slot Inspector</h3>
-                <p className="text-xs text-white/50 font-mono mt-0.5">
+                <p className="text-xs text-emerald-300 font-mono mt-0.5">
                   {selectedSlot 
                     ? `${selectedSlot.section.toUpperCase()} #${selectedSlot.index + (selectedSlot.section === 'main' ? 9 : 1)}` 
                     : 'Select a slot'}
@@ -865,7 +882,7 @@ export default function MinecraftEditor() {
                         {editorItemId ? getDisplayName(editorItemId) : 'Choose Item...'}
                       </div>
                       <div className="text-[10px] sm:text-[11px] text-white/50 font-mono">
-                        {editorItemId || 'Click to browse 436+ items'}
+                        {editorItemId || 'Click to browse 430+ items'}
                       </div>
                     </div>
                   </div>
@@ -882,8 +899,7 @@ export default function MinecraftEditor() {
                           const item = ITEMS_BY_ID.get(editorItemId);
                           setEditorCount(item?.maxStack || 64);
                         }}
-                        className="text-[10px] font-mono font-bold text-pink-400 hover:text-pink-300 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 px-1.5 py-0.5 rounded transition-all cursor-pointer"
-                        title="Set to maximum stack size"
+                        className="text-[10px] font-mono font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 rounded transition-all cursor-pointer"
                       >
                         MAX {ITEMS_BY_ID.get(editorItemId)?.maxStack ? `(${ITEMS_BY_ID.get(editorItemId)?.maxStack})` : ''}
                       </button>
@@ -894,7 +910,7 @@ export default function MinecraftEditor() {
                       max={127}
                       value={editorCount}
                       onChange={(e) => setEditorCount(parseInt(e.target.value) || 1)}
-                      className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-3 py-1.5 text-xs sm:text-sm text-white/90 focus:outline-none focus:border-pink-400 font-mono"
+                      className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-3 py-1.5 text-xs sm:text-sm text-white/90 focus:outline-none focus:border-emerald-400 font-mono"
                     />
                   </div>
                   <div>
@@ -910,10 +926,10 @@ export default function MinecraftEditor() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-mono uppercase text-white/50 block mb-1">Custom Name</label>
+                  <label className="text-[11px] font-mono uppercase text-white/50 block mb-1">Custom Display Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. Legendary Pickaxe"
+                    placeholder="e.g. Blade of the Nether"
                     value={editorCustomName}
                     onChange={(e) => setEditorCustomName(e.target.value)}
                     className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-3 py-1.5 text-xs sm:text-sm text-white/90 focus:outline-none focus:border-emerald-400"
@@ -950,10 +966,12 @@ export default function MinecraftEditor() {
                               className="w-10 bg-slate-900 border border-white/10 rounded px-1 py-0.5 text-center font-mono text-xs"
                             />
                             <button
-                              onClick={() => setEditorEnchantments(prev => prev.filter((_, i) => i !== idx))}
+                              onClick={() => {
+                                setEditorEnchantments(prev => prev.filter((_, i) => i !== idx));
+                              }}
                               className="text-rose-400 hover:text-rose-300 p-0.5 cursor-pointer"
                             >
-                              ✕
+                              <X size={13} />
                             </button>
                           </div>
                         </div>
@@ -961,29 +979,36 @@ export default function MinecraftEditor() {
                     })}
                   </div>
 
-                  <select
-                    onChange={(e) => {
-                      const id = parseInt(e.target.value);
-                      if (isNaN(id)) return;
-                      const def = ENCHANTS_BY_ID.get(id);
-                      setEditorEnchantments(prev => [...prev, { id, lvl: def?.maxLevel || 1 }]);
-                      e.target.value = '';
-                    }}
-                    defaultValue=""
-                    className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-white/70 focus:outline-none focus:border-purple-400 cursor-pointer"
-                  >
-                    <option value="" disabled>+ Add Enchantment...</option>
-                    {MINECRAFT_ENCHANTMENTS.filter(e => !editorEnchantments.some(x => x.id === e.id)).map(e => (
-                      <option key={e.id} value={e.id}>
-                        {e.name} (Max {toRoman(e.maxLevel)})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1.5">
+                    <select
+                      onChange={(e) => {
+                        const id = parseInt(e.target.value);
+                        if (!id) return;
+                        const def = ENCHANTS_BY_ID.get(id);
+                        if (def && !editorEnchantments.some(x => x.id === id)) {
+                          setEditorEnchantments(prev => [...prev, { id, lvl: def.maxLevel }]);
+                        }
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                      className="flex-1 bg-slate-950/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-white/80 focus:outline-none focus:border-emerald-400 cursor-pointer"
+                    >
+                      <option value="" disabled>+ Add Enchantment...</option>
+                      {MINECRAFT_ENCHANTMENTS
+                        .filter(e => !editorEnchantments.some(x => x.id === e.id))
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map(e => (
+                          <option key={e.id} value={e.id}>
+                            {e.name} (Max {toRoman(e.maxLevel)})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </div>
 
                 <button
                   onClick={applyEditorChanges}
-                  className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2.5 rounded-2xl text-xs sm:text-sm transition-all shadow-lg shadow-pink-600/30 cursor-pointer mt-1"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold py-2.5 rounded-2xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-500/25 cursor-pointer mt-1"
                 >
                   ✓ Apply Changes to Slot
                 </button>
@@ -997,6 +1022,7 @@ export default function MinecraftEditor() {
         </div>
       </div>
 
+      {/* Item Search Modal */}
       <AnimatePresence>
         {isPickerOpen && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4">
@@ -1023,7 +1049,7 @@ export default function MinecraftEditor() {
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/50" />
                 <input
                   type="text"
-                  placeholder="Search 436+ items (e.g. netherite, sponge, sword)..."
+                  placeholder="Search 430+ items (e.g. netherite, sponge, sword)..."
                   value={pickerSearch}
                   onChange={(e) => setPickerSearch(e.target.value)}
                   className="w-full bg-slate-950 border border-white/10 rounded-2xl pl-9 pr-4 py-2 text-xs sm:text-sm text-white/90 focus:outline-none focus:border-emerald-400"
@@ -1056,7 +1082,7 @@ export default function MinecraftEditor() {
                       if (editorCount > item.maxStack) setEditorCount(item.maxStack);
                       setIsPickerOpen(false);
                     }}
-                    className="flex flex-col items-center gap-1 p-2 rounded-2xl bg-slate-950/60 hover:bg-emerald-950/50 border border-white/5 hover:border-pink-500/50 transition-all cursor-pointer text-center group"
+                    className="flex flex-col items-center gap-1 p-2 rounded-2xl bg-slate-950/60 hover:bg-emerald-950/50 border border-white/5 hover:border-emerald-500/50 transition-all cursor-pointer text-center group"
                   >
                     <img 
                       src={getIconUrl(item.id)} 

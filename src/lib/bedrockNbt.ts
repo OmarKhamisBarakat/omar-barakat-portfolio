@@ -7,6 +7,7 @@ export interface ItemSlot {
   damage: number;
   enchantments: { id: number; lvl: number }[];
   customName?: string;
+  _raw?: any;
 }
 
 export interface InventoryState {
@@ -22,11 +23,13 @@ export interface ParsedWorld {
   zip: JSZip;
   logFileName: string;
   logData: Uint8Array;
+  playerKey: Uint8Array;
   inventory: InventoryState;
   rawRootNbt: any;
+  isLevelDat?: boolean;
 }
 
-const TAG = {
+export const TAG = {
   End: 0,
   Byte: 1,
   Short: 2,
@@ -51,7 +54,7 @@ for (let i = 0; i < 256; i++) {
   CRC32C_TABLE[i] = c >>> 0;
 }
 
-function crc32c(data: Uint8Array): number {
+export function crc32c(data: Uint8Array): number {
   let crc = 0xFFFFFFFF;
   for (let i = 0; i < data.length; i++) {
     crc = CRC32C_TABLE[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
@@ -59,11 +62,11 @@ function crc32c(data: Uint8Array): number {
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
 
-function maskCrc(crc: number): number {
+export function maskCrc(crc: number): number {
   return ((((crc >>> 15) | (crc << 17)) + 0xa282ead8) >>> 0);
 }
 
-function encodeVarint(val: number): Uint8Array {
+export function encodeVarint(val: number): Uint8Array {
   const bytes: number[] = [];
   let num = val;
   while (num >= 0x80) {
@@ -155,7 +158,7 @@ export class NbtReader {
       }
       case TAG.Compound: {
         const compound: Record<string, any> = {};
-        while (true) {
+        while (this.offset < this.buffer.length) {
           const itemType = this.readUByte();
           if (itemType === TAG.End) break;
           const name = this.readString();
@@ -176,16 +179,16 @@ export class NbtReader {
         return { type, value: arr };
       }
       default:
-        throw new Error(`Unknown NBT Tag Type: ${type}`);
+        throw new Error(`Unknown NBT Tag Type: ${type} at byte offset ${this.offset - 1}`);
     }
   }
 
   readRoot(): any {
     const rootType = this.readUByte();
-    if (rootType !== TAG.Compound) throw new Error(`Expected compound root, got ${rootType}`);
+    if (rootType !== TAG.Compound) throw new Error(`Expected compound root tag (10), got ${rootType}`);
     const name = this.readString();
     const compound: Record<string, any> = {};
-    while (true) {
+    while (this.offset < this.buffer.length) {
       const itemType = this.readUByte();
       if (itemType === TAG.End) break;
       const key = this.readString();
@@ -293,7 +296,7 @@ export class NbtWriter {
     this.writeUByte(TAG.Compound);
     this.writeString(root.name || '');
     this.writeTag(root);
-    
+
     let totalLen = 0;
     for (const c of this.chunks) totalLen += c.length;
     const result = new Uint8Array(totalLen);
@@ -310,7 +313,7 @@ export function parseItem(itemTag: any): ItemSlot | null {
   if (!itemTag || !itemTag.value) return null;
   const val = itemTag.value;
   const name = val.Name ? String(val.Name.value) : '';
-  if (!name || name === 'minecraft:air') return null;
+  if (!name || name === '' || name === 'minecraft:air') return null;
 
   const count = val.Count ? Number(val.Count.value) : 1;
   const slot = val.Slot ? Number(val.Slot.value) : 0;
@@ -336,20 +339,97 @@ export function parseItem(itemTag: any): ItemSlot | null {
     }
   }
 
-  return { name, count, slot, damage, enchantments, customName };
+  return { name, count, slot, damage, enchantments, customName, _raw: itemTag };
 }
 
-export function dictToNbtItem(item: ItemSlot, slotIndex: number): any {
+export function dictToNbtItem(item: ItemSlot, slotIndex?: number, isArmorOrOffhand: boolean = false): any {
+  // If original raw compound exists and item name hasn't changed, clone and update
+  if (item._raw && item._raw.value && item._raw.value.Name && item._raw.value.Name.value === item.name) {
+    const cloneValue: Record<string, any> = { ...item._raw.value };
+    cloneValue.Count = { type: TAG.Byte, value: Math.max(1, Math.min(127, item.count)) };
+    cloneValue.Damage = { type: TAG.Short, value: item.damage || 0 };
+    cloneValue.WasPickedUp = { type: TAG.Byte, value: 0 };
+
+    if (!isArmorOrOffhand && slotIndex !== undefined) {
+      cloneValue.Slot = { type: TAG.Byte, value: slotIndex };
+    } else {
+      delete cloneValue.Slot;
+    }
+
+    // Update enchantments & display in tag
+    if ((item.enchantments && item.enchantments.length > 0) || item.customName) {
+      const extraValue: Record<string, any> = cloneValue.tag?.value ? { ...cloneValue.tag.value } : {
+        Damage: { type: TAG.Int, value: 0 },
+        RepairCost: { type: TAG.Int, value: 0 }
+      };
+
+      if (item.enchantments && item.enchantments.length > 0) {
+        extraValue.ench = {
+          type: TAG.List,
+          itemType: TAG.Compound,
+          value: item.enchantments.map(e => ({
+            type: TAG.Compound,
+            value: {
+              id: { type: TAG.Short, value: e.id },
+              lvl: { type: TAG.Short, value: e.lvl }
+            }
+          }))
+        };
+      } else {
+        delete extraValue.ench;
+      }
+
+      if (item.customName) {
+        extraValue.display = {
+          type: TAG.Compound,
+          value: {
+            Name: { type: TAG.String, value: item.customName }
+          }
+        };
+      } else if (extraValue.display?.value?.Name) {
+        delete extraValue.display.value.Name;
+        if (Object.keys(extraValue.display.value).length === 0) delete extraValue.display;
+      }
+
+      cloneValue.tag = { type: TAG.Compound, value: extraValue };
+    }
+
+    return { type: TAG.Compound, value: cloneValue };
+  }
+
   const itemCompound: Record<string, any> = {
     Name: { type: TAG.String, value: item.name },
     Count: { type: TAG.Byte, value: Math.max(1, Math.min(127, item.count)) },
-    Slot: { type: TAG.Byte, value: slotIndex },
     Damage: { type: TAG.Short, value: item.damage || 0 },
     WasPickedUp: { type: TAG.Byte, value: 0 }
   };
 
+  if (!isArmorOrOffhand && slotIndex !== undefined) {
+    itemCompound.Slot = { type: TAG.Byte, value: slotIndex };
+  }
+
+  // Block tag for blocks in Bedrock
+  const blockKeywords = [
+    'sponge', 'wet_sponge', 'grass', 'dirt', 'stone', 'cobblestone',
+    'chest', 'torch', 'sand', 'gravel', 'planks', 'obsidian', 'bedrock',
+    'tnt', 'bookshelf', 'glass', 'furnace', 'table', 'wool', 'ore', 'log', 'wood'
+  ];
+  const shortName = item.name.replace('minecraft:', '').toLowerCase();
+  if (blockKeywords.some(kw => shortName.includes(kw)) || shortName.includes('block')) {
+    itemCompound.Block = {
+      type: TAG.Compound,
+      value: {
+        name: { type: TAG.String, value: item.name },
+        states: { type: TAG.Compound, value: {} },
+        version: { type: TAG.Int, value: 18168865 }
+      }
+    };
+  }
+
   const extra: Record<string, any> = {};
   if (item.enchantments && item.enchantments.length > 0) {
+    extra.Damage = { type: TAG.Int, value: 0 };
+    extra.RepairCost = { type: TAG.Int, value: 0 };
     extra.ench = {
       type: TAG.List,
       itemType: TAG.Compound,
@@ -373,22 +453,26 @@ export function dictToNbtItem(item: ItemSlot, slotIndex: number): any {
   }
 
   if (Object.keys(extra).length > 0) {
-    itemCompound.tag = { type: TAG.Compound, value: extra };
+    itemCompound.tag = {
+      type: TAG.Compound,
+      value: extra
+    };
   }
 
   return { type: TAG.Compound, value: itemCompound };
 }
 
-function makeEmptyNbtItem(slotIndex: number): any {
-  return {
-    type: TAG.Compound,
-    value: {
-      Name: { type: TAG.String, value: '' },
-      Count: { type: TAG.Byte, value: 0 },
-      Slot: { type: TAG.Byte, value: slotIndex },
-      Damage: { type: TAG.Short, value: 0 }
-    }
+export function makeEmptyNbtItem(slotIndex?: number, isArmorOrOffhand: boolean = false): any {
+  const itemCompound: Record<string, any> = {
+    Name: { type: TAG.String, value: '' },
+    Count: { type: TAG.Byte, value: 0 },
+    Damage: { type: TAG.Short, value: 0 },
+    WasPickedUp: { type: TAG.Byte, value: 0 }
   };
+  if (!isArmorOrOffhand && slotIndex !== undefined) {
+    itemCompound.Slot = { type: TAG.Byte, value: slotIndex };
+  }
+  return { type: TAG.Compound, value: itemCompound };
 }
 
 export function parseInventoryFromNbt(root: any): InventoryState {
@@ -436,67 +520,154 @@ export function parseInventoryFromNbt(root: any): InventoryState {
   return result;
 }
 
-function findAllOccurrences(haystack: Uint8Array, needle: Uint8Array): number[] {
-  const results: number[] = [];
-  let pos = 0;
-  while (true) {
-    let found = -1;
-    outer: for (let i = pos; i <= haystack.length - needle.length; i++) {
-      for (let j = 0; j < needle.length; j++) {
-        if (haystack[i + j] !== needle[j]) continue outer;
-      }
-      found = i;
-      break;
+/**
+ * Parses LevelDB WAL records from a .log file, reassembling fragmented records across 32KB blocks.
+ */
+function parseLevelDbWalRecords(logBytes: Uint8Array): Uint8Array[] {
+  const BLOCK_SIZE = 32768;
+  const records: Uint8Array[] = [];
+  let offset = 0;
+  let curFragment: number[] = [];
+
+  while (offset + 7 <= logBytes.length) {
+    const blockOffset = offset % BLOCK_SIZE;
+    if (BLOCK_SIZE - blockOffset < 7) {
+      // Skip padding at end of block
+      offset += (BLOCK_SIZE - blockOffset);
+      continue;
     }
-    if (found === -1) break;
-    results.push(found);
-    pos = found + 1;
+
+    const dv = new DataView(logBytes.buffer, logBytes.byteOffset + offset, 7);
+    const length = dv.getUint16(4, true);
+    const recType = dv.getUint8(6);
+    offset += 7;
+
+    if (offset + length > logBytes.length) break;
+    const payload = logBytes.subarray(offset, offset + length);
+    offset += length;
+
+    if (recType === 1) { // FULL
+      records.push(new Uint8Array(payload));
+    } else if (recType === 2) { // FIRST
+      curFragment = Array.from(payload);
+    } else if (recType === 3) { // MIDDLE
+      for (let i = 0; i < payload.length; i++) curFragment.push(payload[i]);
+    } else if (recType === 4) { // LAST
+      for (let i = 0; i < payload.length; i++) curFragment.push(payload[i]);
+      records.push(new Uint8Array(curFragment));
+      curFragment = [];
+    }
   }
+
+  return records;
+}
+
+/**
+ * Extracts key-value entries from a LevelDB WriteBatch.
+ */
+function parseWriteBatch(batch: Uint8Array): { key: Uint8Array; value: Uint8Array }[] {
+  if (batch.length < 12) return [];
+  const results: { key: Uint8Array; value: Uint8Array }[] = [];
+  let bpos = 12;
+
+  while (bpos < batch.length) {
+    const opType = batch[bpos++];
+
+    // Read varint keyLen
+    let keyLen = 0;
+    let shift = 0;
+    while (bpos < batch.length) {
+      const b = batch[bpos++];
+      keyLen |= (b & 0x7f) << shift;
+      if (!(b & 0x80)) break;
+      shift += 7;
+    }
+    if (bpos + keyLen > batch.length) break;
+    const key = batch.subarray(bpos, bpos + keyLen);
+    bpos += keyLen;
+
+    if (opType === 1) { // Put
+      let valLen = 0;
+      shift = 0;
+      while (bpos < batch.length) {
+        const b = batch[bpos++];
+        valLen |= (b & 0x7f) << shift;
+        if (!(b & 0x80)) break;
+        shift += 7;
+      }
+      if (bpos + valLen > batch.length) break;
+      const value = batch.subarray(bpos, bpos + valLen);
+      bpos += valLen;
+      results.push({ key, value });
+    }
+  }
+
   return results;
 }
 
 export async function parseBedrockWorldZip(file: File | Blob, fileName: string): Promise<ParsedWorld> {
   const zip = await JSZip.loadAsync(file);
-  const baseName = fileName.replace(/\.(zip|mcworld)$/i, '');
+  const baseName = fileName.replace(/\.(zip|mcworld|dat)$/i, '');
 
-  let lastPlayerKeyOffset = -1;
-  let logFileName = '';
-  let logData: Uint8Array | null = null;
-
-  const searchTarget = new TextEncoder().encode('~local_player');
+  let selectedLogFile = '';
+  let selectedLogBytes: Uint8Array | null = null;
+  let playerKey: Uint8Array = new TextEncoder().encode('~local_player');
+  let playerNbtBytes: Uint8Array | null = null;
 
   const files = Object.keys(zip.files);
-  for (const f of files) {
-    if (f.includes('db/') && (f.endsWith('.log') || f.endsWith('.ldb'))) {
-      const bytes = await zip.files[f].async('uint8array');
-      const matches = findAllOccurrences(bytes, searchTarget);
-      if (matches.length > 0) {
-        logFileName = f;
-        logData = bytes;
-        lastPlayerKeyOffset = matches[matches.length - 1]; // Pick latest entry in WAL log
-        break;
+  const logFiles = files.filter(f => f.includes('db/') && f.endsWith('.log'));
+
+  // Sort log files by number descending to find latest WAL entries first
+  logFiles.sort((a, b) => b.localeCompare(a));
+
+  for (const logPath of logFiles) {
+    const logBytes = await zip.files[logPath].async('uint8array');
+    const records = parseLevelDbWalRecords(logBytes);
+
+    // Scan backwards from newest batch to oldest
+    for (let r = records.length - 1; r >= 0; r--) {
+      const entries = parseWriteBatch(records[r]);
+      for (const entry of entries) {
+        const keyStr = new TextDecoder('utf-8').decode(entry.key);
+        if (keyStr === '~local_player' || keyStr.startsWith('player_server_') || keyStr.startsWith('player_') || keyStr === 'player') {
+          selectedLogFile = logPath;
+          selectedLogBytes = logBytes;
+          playerKey = entry.key;
+          playerNbtBytes = entry.value;
+          break;
+        }
       }
+      if (playerNbtBytes) break;
     }
+    if (playerNbtBytes) break;
   }
 
-  if (!logData || lastPlayerKeyOffset === -1) {
-    throw new Error('Could not find local player data in world archive');
-  }
-
-  let nbtOffset = -1;
-  for (let i = lastPlayerKeyOffset + searchTarget.length; i < Math.min(logData.length - 3, lastPlayerKeyOffset + searchTarget.length + 100); i++) {
-    if (logData[i] === 10 && logData[i + 1] === 0 && logData[i + 2] === 0) {
-      nbtOffset = i;
-      break;
+  // Fallback: Check level.dat
+  if (!playerNbtBytes) {
+    const levelDatFile = files.find(f => f.endsWith('level.dat'));
+    if (levelDatFile) {
+      const ldBytes = await zip.files[levelDatFile].async('uint8array');
+      // Strip 8-byte Bedrock header if present
+      const rawNbt = (ldBytes.length > 8 && ldBytes[8] === 0x0A) ? ldBytes.subarray(8) : ldBytes;
+      const reader = new NbtReader(rawNbt);
+      const rawRootNbt = reader.readRoot();
+      const inventory = parseInventoryFromNbt(rawRootNbt);
+      return {
+        fileName,
+        baseName,
+        zip,
+        logFileName: levelDatFile,
+        logData: ldBytes,
+        playerKey,
+        inventory,
+        rawRootNbt,
+        isLevelDat: true
+      };
     }
+    throw new Error('Could not find player inventory data in this Bedrock world.');
   }
 
-  if (nbtOffset === -1) {
-    throw new Error('Could not parse player NBT header');
-  }
-
-  const nbtBytes = logData.subarray(nbtOffset);
-  const reader = new NbtReader(nbtBytes);
+  const reader = new NbtReader(playerNbtBytes);
   const rawRootNbt = reader.readRoot();
   const inventory = parseInventoryFromNbt(rawRootNbt);
 
@@ -504,10 +675,12 @@ export async function parseBedrockWorldZip(file: File | Blob, fileName: string):
     fileName,
     baseName,
     zip,
-    logFileName,
-    logData,
+    logFileName: selectedLogFile,
+    logData: selectedLogBytes!,
+    playerKey,
     inventory,
-    rawRootNbt
+    rawRootNbt,
+    isLevelDat: false
   };
 }
 
@@ -515,11 +688,11 @@ export async function exportModifiedWorldZip(world: ParsedWorld, updatedInventor
   const invItems: any[] = [];
   for (let s = 0; s < 9; s++) {
     const it = updatedInventory.hotbar[s];
-    if (it && it.name) invItems.push(dictToNbtItem(it, s));
+    if (it && it.name) invItems.push(dictToNbtItem(it, s, false));
   }
   for (let s = 0; s < 27; s++) {
     const it = updatedInventory.main[s];
-    if (it && it.name) invItems.push(dictToNbtItem(it, s + 9));
+    if (it && it.name) invItems.push(dictToNbtItem(it, s + 9, false));
   }
 
   world.rawRootNbt.value.Inventory = {
@@ -528,11 +701,18 @@ export async function exportModifiedWorldZip(world: ParsedWorld, updatedInventor
     value: invItems
   };
 
+  const origArmorLen = world.rawRootNbt.value?.Armor?.value?.length || 4;
+  const armorCount = Math.max(4, origArmorLen);
   const armorItems: any[] = [];
-  for (let i = 0; i < 4; i++) {
-    const it = updatedInventory.armor[i];
-    if (it && it.name) armorItems.push(dictToNbtItem(it, i));
-    else armorItems.push(makeEmptyNbtItem(i));
+  for (let i = 0; i < armorCount; i++) {
+    if (i < 4) {
+      const it = updatedInventory.armor[i];
+      if (it && it.name) armorItems.push(dictToNbtItem(it, undefined, true));
+      else armorItems.push(makeEmptyNbtItem(undefined, true));
+    } else {
+      if (origArmorLen > 4) armorItems.push(world.rawRootNbt.value.Armor.value[4]);
+      else armorItems.push(makeEmptyNbtItem(undefined, true));
+    }
   }
   world.rawRootNbt.value.Armor = {
     type: TAG.List,
@@ -544,14 +724,26 @@ export async function exportModifiedWorldZip(world: ParsedWorld, updatedInventor
   world.rawRootNbt.value.Offhand = {
     type: TAG.List,
     itemType: TAG.Compound,
-    value: [offhandIt && offhandIt.name ? dictToNbtItem(offhandIt, 0) : makeEmptyNbtItem(0)]
+    value: [offhandIt && offhandIt.name ? dictToNbtItem(offhandIt, undefined, true) : makeEmptyNbtItem(undefined, true)]
   };
 
   const writer = new NbtWriter();
   const newNbtBytes = writer.writeRoot(world.rawRootNbt);
 
+  if (world.isLevelDat) {
+    const header = new Uint8Array(8);
+    const dv = new DataView(header.buffer);
+    dv.setInt32(0, 10, true);
+    dv.setInt32(4, newNbtBytes.length, true);
+    const combined = new Uint8Array(8 + newNbtBytes.length);
+    combined.set(header, 0);
+    combined.set(newNbtBytes, 8);
+    world.zip.file(world.logFileName, combined);
+    return await world.zip.generateAsync({ type: 'blob', mimeType: 'application/x-minecraft-world', compression: 'DEFLATE' });
+  }
+
   // Construct valid LevelDB WriteBatch record
-  const searchTarget = new TextEncoder().encode('~local_player');
+  const searchTarget = world.playerKey && world.playerKey.length > 0 ? world.playerKey : new TextEncoder().encode('~local_player');
   const batchHeader = new Uint8Array(12);
   const dv = new DataView(batchHeader.buffer);
   dv.setUint32(0, 0x000F4240, true);
@@ -575,7 +767,7 @@ export async function exportModifiedWorldZip(world: ParsedWorld, updatedInventor
   // Chunk batchData into 32KB LevelDB WAL record blocks
   const BLOCK_SIZE = 32768;
   const chunksToAppend: Uint8Array[] = [];
-  
+
   const rem = world.logData.length % BLOCK_SIZE;
   if (rem > 0 && BLOCK_SIZE - rem < 7) {
     chunksToAppend.push(new Uint8Array(BLOCK_SIZE - rem));
@@ -639,5 +831,5 @@ export async function exportModifiedWorldZip(world: ParsedWorld, updatedInventor
   }
 
   world.zip.file(world.logFileName, updatedLog);
-  return await world.zip.generateAsync({ type: 'blob', mimeType: 'application/zip', compression: 'DEFLATE' });
+  return await world.zip.generateAsync({ type: 'blob', mimeType: 'application/x-minecraft-world', compression: 'DEFLATE' });
 }
