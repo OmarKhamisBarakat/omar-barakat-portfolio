@@ -521,21 +521,43 @@ export default function MinecraftEditor() {
 
 
 
+  const downloadFile = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 60000);
+  };
+
   const exportZip = async () => {
     if (!world) return;
     setIsLoading(true);
     setLoadingText('Packaging world into ZIP archive...');
     try {
       const blob = await exportModifiedWorldZip(world, inventory);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${world.baseName}_modified.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      notify('Export complete! World zip downloaded.');
+      downloadFile(blob, `${world.baseName}_modified.zip`);
+      notify('Export complete! ZIP downloaded.');
+    } catch (err: any) {
+      notify(err.message || 'Export failed', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const exportMcWorld = async () => {
+    if (!world) return;
+    setIsLoading(true);
+    setLoadingText('Packaging for iOS Minecraft import (.mcworld)...');
+    try {
+      const blob = await exportModifiedWorldZip(world, inventory);
+      downloadFile(blob, `${world.baseName}_modified.mcworld`);
+      notify('Export complete! Tap the .mcworld file on iOS to auto-open in Minecraft.');
     } catch (err: any) {
       notify(err.message || 'Export failed', 'error');
     } finally {
@@ -673,13 +695,23 @@ export default function MinecraftEditor() {
             </button>
 
             {world && (
-              <button
-                onClick={exportZip}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-pink-600 to-pink-400 hover:brightness-110 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-pink-600/30 transition-all cursor-pointer"
-              >
-                <Download size={15} />
-                <span>Export ZIP</span>
-              </button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={exportMcWorld}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-pink-600 to-amber-500 hover:brightness-110 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-pink-600/30 transition-all cursor-pointer"
+                  title="Direct 1-Tap iOS Import file"
+                >
+                  <Download size={15} />
+                  <span>Export .mcworld (iOS 1-Tap)</span>
+                </button>
+                <button
+                  onClick={exportZip}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-medium border border-white/10 transition-all cursor-pointer"
+                >
+                  <Download size={15} />
+                  <span>ZIP</span>
+                </button>
+              </div>
             )}
           </div>
         </header>
