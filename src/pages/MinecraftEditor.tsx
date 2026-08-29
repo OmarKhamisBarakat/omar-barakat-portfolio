@@ -527,12 +527,16 @@ export default function MinecraftEditor() {
     a.href = url;
     a.download = filename;
     a.rel = 'noopener';
+    a.style.position = 'fixed';
+    a.style.left = '-9999px';
+    a.style.top = '-9999px';
     document.body.appendChild(a);
-    a.click();
+    const evt = new MouseEvent('click', { bubbles: false, cancelable: true, view: window });
+    a.dispatchEvent(evt);
     setTimeout(() => {
-      document.body.removeChild(a);
+      try { document.body.removeChild(a); } catch (_) {}
       URL.revokeObjectURL(url);
-    }, 60000);
+    }, 120000);
   };
 
   const exportZip = async () => {
