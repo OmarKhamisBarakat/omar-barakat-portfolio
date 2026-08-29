@@ -75,6 +75,7 @@ export default function MinecraftEditor() {
   const [pickerCategory, setPickerCategory] = useState('all');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const [loadingText, setLoadingText] = useState('');
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -266,6 +267,259 @@ export default function MinecraftEditor() {
 
     notify('Equipped God Armor Set with Max Enchants!');
   };
+  const clearAllSlots = () => {
+    setInventory({
+      hotbar: Array(9).fill(null),
+      main: Array(27).fill(null),
+      armor: Array(4).fill(null),
+      offhand: [null]
+    });
+    loadItemIntoEditor(null);
+    setSelectedSlot(null);
+    notify('All slots cleared!');
+  };
+
+  const fillEmptyDirt = () => {
+    let count = 0;
+    setInventory(prev => {
+      const next = { ...prev };
+      const h = [...next.hotbar];
+      const m = [...next.main];
+      for (let i = 0; i < 9; i++) { if (!h[i] || !h[i]?.name) { h[i] = { name: 'minecraft:dirt', count: 64, slot: i, damage: 0, enchantments: [] }; count++; } }
+      for (let i = 0; i < 27; i++) { if (!m[i] || !m[i]?.name) { m[i] = { name: 'minecraft:dirt', count: 64, slot: i + 9, damage: 0, enchantments: [] }; count++; } }
+      next.hotbar = h; next.main = m;
+      return next;
+    });
+    notify(`Filled ${count} empty slots with 64 Dirt!`);
+  };
+
+  const fillEmptyGoldenApples = () => {
+    let count = 0;
+    setInventory(prev => {
+      const next = { ...prev };
+      const h = [...next.hotbar];
+      const m = [...next.main];
+      for (let i = 0; i < 9; i++) { if (!h[i] || !h[i]?.name) { h[i] = { name: 'minecraft:golden_apple', count: 64, slot: i, damage: 0, enchantments: [] }; count++; } }
+      for (let i = 0; i < 27; i++) { if (!m[i] || !m[i]?.name) { m[i] = { name: 'minecraft:golden_apple', count: 64, slot: i + 9, damage: 0, enchantments: [] }; count++; } }
+      next.hotbar = h; next.main = m;
+      return next;
+    });
+    notify(`Filled ${count} empty slots with 64 Golden Apples!`);
+  };
+
+  const fillEmptyEnderPearls = () => {
+    let count = 0;
+    setInventory(prev => {
+      const next = { ...prev };
+      const h = [...next.hotbar];
+      const m = [...next.main];
+      for (let i = 0; i < 9; i++) { if (!h[i] || !h[i]?.name) { h[i] = { name: 'minecraft:ender_pearl', count: 16, slot: i, damage: 0, enchantments: [] }; count++; } }
+      for (let i = 0; i < 27; i++) { if (!m[i] || !m[i]?.name) { m[i] = { name: 'minecraft:ender_pearl', count: 16, slot: i + 9, damage: 0, enchantments: [] }; count++; } }
+      next.hotbar = h; next.main = m;
+      return next;
+    });
+    notify(`Filled ${count} empty slots with 16 Ender Pearls!`);
+  };
+
+  const fillEmptyTotems = () => {
+    let count = 0;
+    setInventory(prev => {
+      const next = { ...prev };
+      const h = [...next.hotbar];
+      const m = [...next.main];
+      for (let i = 0; i < 9; i++) { if (!h[i] || !h[i]?.name) { h[i] = { name: 'minecraft:totem_of_undying', count: 1, slot: i, damage: 0, enchantments: [] }; count++; } }
+      for (let i = 0; i < 27; i++) { if (!m[i] || !m[i]?.name) { m[i] = { name: 'minecraft:totem_of_undying', count: 1, slot: i + 9, damage: 0, enchantments: [] }; count++; } }
+      next.hotbar = h; next.main = m;
+      return next;
+    });
+    notify(`Filled ${count} empty slots with Totems of Undying!`);
+  };
+
+  const fillEmptyFireworks = () => {
+    let count = 0;
+    setInventory(prev => {
+      const next = { ...prev };
+      const h = [...next.hotbar];
+      const m = [...next.main];
+      for (let i = 0; i < 9; i++) { if (!h[i] || !h[i]?.name) { h[i] = { name: 'minecraft:firework_rocket', count: 64, slot: i, damage: 0, enchantments: [] }; count++; } }
+      for (let i = 0; i < 27; i++) { if (!m[i] || !m[i]?.name) { m[i] = { name: 'minecraft:firework_rocket', count: 64, slot: i + 9, damage: 0, enchantments: [] }; count++; } }
+      next.hotbar = h; next.main = m;
+      return next;
+    });
+    notify(`Filled ${count} empty slots with 64 Firework Rockets!`);
+  };
+
+  const maxEnchantSword = () => {
+    const swordEnchs = [
+      { id: 9, lvl: 5 },
+      { id: 11, lvl: 2 },
+      { id: 12, lvl: 2 },
+      { id: 13, lvl: 2 },
+      { id: 14, lvl: 3 },
+      { id: 17, lvl: 3 },
+      { id: 26, lvl: 1 }
+    ];
+    let upgraded = 0;
+    setInventory(prev => ({
+      ...prev,
+      hotbar: prev.hotbar.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('sword')) { upgraded++; return { ...it, enchantments: [...swordEnchs] }; }
+        return it;
+      }),
+      main: prev.main.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('sword')) { upgraded++; return { ...it, enchantments: [...swordEnchs] }; }
+        return it;
+      })
+    }));
+    notify(`Upgraded ${upgraded} swords with God Sword enchants!`);
+  };
+
+  const maxEnchantBow = () => {
+    const bowEnchs = [
+      { id: 19, lvl: 5 },
+      { id: 20, lvl: 1 },
+      { id: 21, lvl: 1 },
+      { id: 22, lvl: 2 },
+      { id: 17, lvl: 3 },
+      { id: 26, lvl: 1 }
+    ];
+    let upgraded = 0;
+    setInventory(prev => ({
+      ...prev,
+      hotbar: prev.hotbar.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('bow') && !it.name.toLowerCase().includes('bowl')) { upgraded++; return { ...it, enchantments: [...bowEnchs] }; }
+        return it;
+      }),
+      main: prev.main.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('bow') && !it.name.toLowerCase().includes('bowl')) { upgraded++; return { ...it, enchantments: [...bowEnchs] }; }
+        return it;
+      })
+    }));
+    notify(`Upgraded ${upgraded} bows with God Bow enchants!`);
+  };
+
+  const maxEnchantTrident = () => {
+    const tridentEnchs = [
+      { id: 29, lvl: 3 },
+      { id: 30, lvl: 1 },
+      { id: 32, lvl: 5 },
+      { id: 17, lvl: 3 },
+      { id: 26, lvl: 1 }
+    ];
+    let upgraded = 0;
+    setInventory(prev => ({
+      ...prev,
+      hotbar: prev.hotbar.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('trident')) { upgraded++; return { ...it, enchantments: [...tridentEnchs] }; }
+        return it;
+      }),
+      main: prev.main.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('trident')) { upgraded++; return { ...it, enchantments: [...tridentEnchs] }; }
+        return it;
+      })
+    }));
+    notify(`Upgraded ${upgraded} tridents with God Trident enchants!`);
+  };
+
+  const maxEnchantCrossbow = () => {
+    const crossbowEnchs = [
+      { id: 33, lvl: 4 },
+      { id: 34, lvl: 1 },
+      { id: 35, lvl: 3 },
+      { id: 17, lvl: 3 },
+      { id: 26, lvl: 1 }
+    ];
+    let upgraded = 0;
+    setInventory(prev => ({
+      ...prev,
+      hotbar: prev.hotbar.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('crossbow')) { upgraded++; return { ...it, enchantments: [...crossbowEnchs] }; }
+        return it;
+      }),
+      main: prev.main.map(it => {
+        if (it && it.name && it.name.toLowerCase().includes('crossbow')) { upgraded++; return { ...it, enchantments: [...crossbowEnchs] }; }
+        return it;
+      })
+    }));
+    notify(`Upgraded ${upgraded} crossbows with God Crossbow enchants!`);
+  };
+
+  const pvpLoadout = () => {
+    const swordEnchs = [{ id: 9, lvl: 5 }, { id: 11, lvl: 2 }, { id: 14, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }];
+    const armorEnchs = (extra: {id:number;lvl:number}[]) => [{ id: 0, lvl: 4 }, { id: 5, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }, ...extra];
+    setInventory({
+      hotbar: [
+        { name: 'minecraft:netherite_sword', count: 1, slot: 0, damage: 0, enchantments: swordEnchs },
+        { name: 'minecraft:ender_pearl', count: 16, slot: 1, damage: 0, enchantments: [] },
+        { name: 'minecraft:golden_apple', count: 64, slot: 2, damage: 0, enchantments: [] },
+        { name: 'minecraft:golden_apple', count: 64, slot: 3, damage: 0, enchantments: [] },
+        { name: 'minecraft:golden_apple', count: 64, slot: 4, damage: 0, enchantments: [] },
+        { name: 'minecraft:golden_apple', count: 64, slot: 5, damage: 0, enchantments: [] },
+        { name: 'minecraft:golden_apple', count: 64, slot: 6, damage: 0, enchantments: [] },
+        { name: 'minecraft:golden_apple', count: 64, slot: 7, damage: 0, enchantments: [] },
+        { name: 'minecraft:totem_of_undying', count: 1, slot: 8, damage: 0, enchantments: [] }
+      ],
+      main: [
+        ...Array(9).fill(null).map((_, i) => ({ name: 'minecraft:totem_of_undying', count: 1, slot: i + 9, damage: 0, enchantments: [] as {id:number;lvl:number}[] })),
+        ...Array(9).fill(null).map((_, i) => ({ name: 'minecraft:golden_apple', count: 64, slot: i + 18, damage: 0, enchantments: [] as {id:number;lvl:number}[] })),
+        ...Array(9).fill(null).map((_, i) => ({ name: 'minecraft:ender_pearl', count: 16, slot: i + 27, damage: 0, enchantments: [] as {id:number;lvl:number}[] }))
+      ],
+      armor: [
+        { name: 'minecraft:netherite_helmet', count: 1, slot: 0, damage: 0, enchantments: armorEnchs([{ id: 6, lvl: 3 }, { id: 8, lvl: 1 }]) },
+        { name: 'minecraft:netherite_chestplate', count: 1, slot: 1, damage: 0, enchantments: armorEnchs([]) },
+        { name: 'minecraft:netherite_leggings', count: 1, slot: 2, damage: 0, enchantments: armorEnchs([{ id: 37, lvl: 3 }]) },
+        { name: 'minecraft:netherite_boots', count: 1, slot: 3, damage: 0, enchantments: armorEnchs([{ id: 2, lvl: 4 }, { id: 7, lvl: 3 }, { id: 36, lvl: 3 }]) }
+      ],
+      offhand: [{ name: 'minecraft:totem_of_undying', count: 1, slot: 0, damage: 0, enchantments: [] }]
+    });
+    setSelectedSlot({ section: 'hotbar', index: 0 });
+    notify('PvP Loadout equipped! Full totems, gaps, pearls.');
+  };
+
+  const survivalStarterKit = () => {
+    setInventory(prev => {
+      const next = { ...prev };
+      next.hotbar = [
+        { name: 'minecraft:netherite_pickaxe', count: 1, slot: 0, damage: 0, enchantments: [{ id: 15, lvl: 5 }, { id: 18, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        { name: 'minecraft:netherite_axe', count: 1, slot: 1, damage: 0, enchantments: [{ id: 15, lvl: 5 }, { id: 18, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        { name: 'minecraft:netherite_shovel', count: 1, slot: 2, damage: 0, enchantments: [{ id: 15, lvl: 5 }, { id: 18, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        { name: 'minecraft:netherite_sword', count: 1, slot: 3, damage: 0, enchantments: [{ id: 9, lvl: 5 }, { id: 14, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        { name: 'minecraft:bow', count: 1, slot: 4, damage: 0, enchantments: [{ id: 19, lvl: 5 }, { id: 22, lvl: 2 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        { name: 'minecraft:golden_apple', count: 64, slot: 5, damage: 0, enchantments: [] },
+        { name: 'minecraft:cooked_beef', count: 64, slot: 6, damage: 0, enchantments: [] },
+        { name: 'minecraft:torch', count: 64, slot: 7, damage: 0, enchantments: [] },
+        { name: 'minecraft:crafting_table', count: 1, slot: 8, damage: 0, enchantments: [] }
+      ];
+      return next;
+    });
+    setSelectedSlot({ section: 'hotbar', index: 0 });
+    notify('Survival Starter Kit equipped!');
+  };
+
+  const elytraKit = () => {
+    setInventory(prev => {
+      const next = { ...prev };
+      next.armor = [
+        prev.armor[0] || { name: 'minecraft:netherite_helmet', count: 1, slot: 0, damage: 0, enchantments: [{ id: 0, lvl: 4 }, { id: 6, lvl: 3 }, { id: 8, lvl: 1 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        { name: 'minecraft:elytra', count: 1, slot: 1, damage: 0, enchantments: [{ id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        prev.armor[2] || { name: 'minecraft:netherite_leggings', count: 1, slot: 2, damage: 0, enchantments: [{ id: 0, lvl: 4 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] },
+        prev.armor[3] || { name: 'minecraft:netherite_boots', count: 1, slot: 3, damage: 0, enchantments: [{ id: 0, lvl: 4 }, { id: 2, lvl: 4 }, { id: 7, lvl: 3 }, { id: 17, lvl: 3 }, { id: 26, lvl: 1 }] }
+      ];
+      const h = [...next.hotbar];
+      let filled = 0;
+      for (let i = 0; i < 9 && filled < 3; i++) {
+        if (!h[i] || !h[i]?.name) {
+          h[i] = { name: 'minecraft:firework_rocket', count: 64, slot: i, damage: 0, enchantments: [] };
+          filled++;
+        }
+      }
+      next.hotbar = h;
+      return next;
+    });
+    notify('Elytra Flight Kit equipped! Elytra + Fireworks loaded.');
+  };
+
+
 
   const exportZip = async () => {
     if (!world) return;
@@ -457,28 +711,68 @@ export default function MinecraftEditor() {
           </div>
         )}
 
-        <div className="bg-white/[0.02] border border-white/10 p-3 sm:p-4 rounded-3xl flex flex-wrap items-center gap-2 sm:gap-3 backdrop-blur-xl">
-          <span className="text-[11px] sm:text-xs font-mono uppercase text-white/50 px-1 sm:px-2 flex items-center gap-1.5">
-            <Wand2 size={13} /> Presets:
-          </span>
+        <div className="bg-white/[0.02] border border-white/10 rounded-3xl backdrop-blur-xl overflow-hidden">
           <button
-            onClick={fillEmptySlotsWithSponges}
-            className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+            onClick={() => setPresetsOpen(!presetsOpen)}
+            className="w-full flex items-center justify-between p-3 sm:p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
           >
-            🧽 Fill 64 Sponges
+            <span className="text-[11px] sm:text-xs font-mono uppercase text-white/50 flex items-center gap-1.5">
+              <Wand2 size={13} /> Presets & Loadouts
+              <span className="bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-1">13</span>
+            </span>
+            <Sparkles size={14} className={`text-white/40 transition-transform ${presetsOpen ? 'rotate-45' : ''}`} />
           </button>
-          <button
-            onClick={maxEnchantToolsNoSilkTouch}
-            className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          >
-            ⚔️ Max Enchants (No Silk Touch)
-          </button>
-          <button
-            onClick={maxEnchantGodArmor}
-            className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          >
-            🛡️ God Armor
-          </button>
+
+          <AnimatePresence>
+            {presetsOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="px-3 sm:px-4 pb-3 sm:pb-4 flex flex-col gap-3">
+                  <div>
+                    <p className="text-[10px] font-mono uppercase text-amber-400/70 mb-1.5 tracking-wider">Fill Empty Slots</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={fillEmptySlotsWithSponges} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🧽 64 Sponges</button>
+                      <button onClick={fillEmptyDirt} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🟫 64 Dirt</button>
+                      <button onClick={fillEmptyGoldenApples} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🍎 64 Golden Apples</button>
+                      <button onClick={fillEmptyEnderPearls} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🔮 16 Ender Pearls</button>
+                      <button onClick={fillEmptyTotems} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🗿 Totems</button>
+                      <button onClick={fillEmptyFireworks} className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🎆 64 Fireworks</button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-mono uppercase text-teal-400/70 mb-1.5 tracking-wider">Max Enchant Weapons</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={maxEnchantToolsNoSilkTouch} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⛏️ Tools (No Silk Touch)</button>
+                      <button onClick={maxEnchantSword} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⚔️ God Sword</button>
+                      <button onClick={maxEnchantBow} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🏹 God Bow</button>
+                      <button onClick={maxEnchantTrident} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🔱 God Trident</button>
+                      <button onClick={maxEnchantCrossbow} className="flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🎯 God Crossbow</button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-mono uppercase text-pink-400/70 mb-1.5 tracking-wider">Full Loadouts</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={maxEnchantGodArmor} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🛡️ God Armor</button>
+                      <button onClick={pvpLoadout} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">⚔️ PvP Loadout</button>
+                      <button onClick={survivalStarterKit} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🏕️ Survival Kit</button>
+                      <button onClick={elytraKit} className="flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🪽 Elytra Kit</button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/5 pt-2">
+                    <button onClick={clearAllSlots} className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer">🗑️ Clear All Slots</button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
