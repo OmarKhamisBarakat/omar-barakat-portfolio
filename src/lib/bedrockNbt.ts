@@ -81,11 +81,11 @@ export class NbtReader {
     return val;
   }
 
-  readLong(): bigint {
+  readLong(): number {
     const low = this.view.getInt32(this.offset, true);
     const high = this.view.getInt32(this.offset + 4, true);
     this.offset += 8;
-    return BigInt(high) * 4294967296n + BigInt(low >>> 0);
+    return high * 4294967296 + (low >>> 0);
   }
 
   readFloat(): number {
@@ -150,7 +150,7 @@ export class NbtReader {
       }
       case TAG.LongArray: {
         const len = this.readInt();
-        const arr: bigint[] = [];
+        const arr: number[] = [];
         for (let i = 0; i < len; i++) arr.push(this.readLong());
         return { type: TAG.LongArray, value: arr };
       }
@@ -196,12 +196,11 @@ export class NbtWriter {
     this.chunks.push(buf);
   }
 
-  writeLong(val: bigint | number) {
+  writeLong(val: number) {
     const buf = new Uint8Array(8);
     const view = new DataView(buf.buffer);
-    const big = BigInt(val);
-    const low = Number(big & 0xffffffffn);
-    const high = Number((big >> 32n) & 0xffffffffn);
+    const low = val & 0xffffffff;
+    const high = Math.floor(val / 4294967296) & 0xffffffff;
     view.setInt32(0, low, true);
     view.setInt32(4, high, true);
     this.chunks.push(buf);

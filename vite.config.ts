@@ -5,6 +5,9 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    target: ['es2020', 'safari14'],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
